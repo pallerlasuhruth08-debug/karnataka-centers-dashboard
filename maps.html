@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Isha Karnataka — A1 Poster Maps</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+<style>
+@page { size: A1 landscape; margin: 0; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:14px/1.4 "Segoe UI",system-ui,sans-serif;color:#1c2333;background:#666}
+.sheet{width:841mm;height:592mm;background:#fff;margin:8px auto;padding:10mm 12mm;overflow:hidden;position:relative;page-break-after:always;break-after:page}
+.no-print{position:fixed;top:10px;right:14px;z-index:9999;display:flex;gap:8px}
+.no-print button{background:#f28c28;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:15px;font-weight:600;cursor:pointer}
+@media print{ body{background:#fff} .sheet{margin:0} .no-print{display:none} }
+.hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:4px solid #f28c28;padding-bottom:4mm;margin-bottom:5mm}
+.hdr h1{font-size:44px} .hdr .tag{color:#6b7280;font-size:18px;text-align:right}
+.hdr .eyebrow{color:#e05e3d;font-size:16px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+.mapwrap{position:relative;height:calc(100% - 34mm);border:2px solid #cbd2e0;border-radius:8px;overflow:hidden}
+#mapB,#mapK{width:100%;height:100%}
+.legend{position:absolute;z-index:900;bottom:8mm;left:8mm;background:rgba(255,255,255,.95);border:2px solid #97a0b5;border-radius:8px;padding:5mm 6mm;font-size:14px;max-width:120mm}
+.legend b.title{display:block;font-size:16px;margin-bottom:2mm}
+.legend .row{display:flex;justify-content:space-between;gap:8mm;padding:1px 0}
+.legend .sw{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:6px;vertical-align:-2px}
+.legend .n{color:#6b7280}
+.foot{position:absolute;bottom:3mm;left:12mm;right:12mm;display:flex;justify-content:space-between;font-size:12px;color:#8a90a3}
+/* map label styles */
+.subarea{background:rgba(255,255,255,.85);border:1px solid #aab2c5;border-radius:4px;padding:1px 5px;font-size:11.5px;line-height:1.2;box-shadow:none;text-align:center;color:#232a3d}
+.subarea:before{display:none}
+.subarea b{font-size:12px}
+.cname{background:transparent;border:0;box-shadow:none;font-size:26px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;-webkit-text-stroke:1.2px #fff;paint-order:stroke fill;text-align:center}
+.cname:before{display:none}
+.kname{background:rgba(255,255,255,.92);border:1.5px solid #97a0b5;border-radius:6px;padding:3px 8px;font-size:15px;line-height:1.25;box-shadow:none;text-align:center}
+.kname:before{display:none}
+.kname b{font-size:16px}
+.kname .m{color:#c96a10;font-weight:700}
+.kname .p{color:#3a63c9}
+</style>
+</head>
+<body>
+<div class="no-print"><button onclick="window.print()">Print / Save PDF — 2 × A1 landscape</button></div>
+
+<section class="sheet">
+  <div class="hdr">
+    <div><div class="eyebrow">Isha Karnataka · Bengaluru Urban</div>
+    <h1>Bengaluru — 15 Centers & Their Sub-Areas</h1></div>
+    <div class="tag" id="tagB"></div>
+  </div>
+  <div class="mapwrap">
+    <div id="mapB"></div>
+    <div class="legend" id="legB"></div>
+  </div>
+  <div class="foot"><span>Each colored region = one pincode, grouped by center color. Label = locality · pincode · meditators. Source: Ishangam (Santosha) + India Post boundaries · 2026-07-10</span><span>Print: A1 landscape · background graphics ON</span></div>
+</section>
+
+<section class="sheet">
+  <div class="hdr">
+    <div><div class="eyebrow">Isha Karnataka · Statewide</div>
+    <h1>Karnataka — All Isha Centers</h1></div>
+    <div class="tag" id="tagK"></div>
+  </div>
+  <div class="mapwrap">
+    <div id="mapK"></div>
+    <div class="legend" id="legK"></div>
+  </div>
+  <div class="foot"><span>Bubble size = meditator strength. Bengaluru's 15 urban centers are shown as one cluster — see the Bengaluru A1 map for the detail. Source: Ishangam (Santosha) · 2026-07-10</span><span>Print: A1 landscape · background graphics ON</span></div>
+</section>
+
+<script src="blr-data.js"></script>
+<script>
+const fmt=n=>n.toLocaleString('en-IN');
+const CB = window.BLR_SHEETS.centers;
+
+// ---------- PAGE 1 : BANGALORE ----------
+const PALETTE=['#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00','#a65628','#f781bf','#1b7f79','#666666','#6a3d9a','#b15928','#2c7fb8','#d95f02','#5f8f29','#c51b7d'];
+const ids=Object.keys(CB).sort((a,b)=>CB[a].name.localeCompare(CB[b].name));
+const colors={}; ids.forEach((cid,i)=>colors[cid]=PALETTE[i%PALETTE.length]);
+const mapB=L.map('mapB',{zoomSnap:0.1,zoomControl:false});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap © CARTO'}).addTo(mapB);
+const fgB=L.featureGroup();
+let totM=0, totP=0;
+ids.forEach(cid=>{
+  const c=CB[cid], col=colors[cid];
+  const byPin=Object.fromEntries(c.pins.map(p=>[p.pin,p]));
+  let latSum=0,lngSum=0,n=0, best=null, bestArea=0;
+  c.pins.forEach(p=>{if(p.pin!=='OTH'){totM+=0;}});
+  c.pins.forEach(p=>{totM+=0});
+  c.polys.forEach(poly=>{
+    const d=byPin[poly.pin];
+    const pg=L.polygon(poly.coords,{color:col,weight:2.2,fillColor:col,fillOpacity:0.28}).addTo(fgB);
+    const ctr=pg.getBounds().getCenter(); latSum+=ctr.lat;lngSum+=ctr.lng;n++;
+    const area=(pg.getBounds().getEast()-pg.getBounds().getWest())*(pg.getBounds().getNorth()-pg.getBounds().getSouth());
+    if(area>bestArea){bestArea=area;best=ctr;}
+    const label = d ? `<b>${(d.area||'').split('/')[0].trim()}</b><br>${poly.pin} · <span style="color:#c96a10;font-weight:700">${fmt(d.med)}</span>` : `<b>${poly.pin}</b>`;
+    pg.bindTooltip(label,{permanent:true,direction:'center',className:'subarea'});
+  });
+  Object.entries(c.approx||{}).forEach(([pin,ll])=>{
+    const d=byPin[pin];
+    L.circleMarker(ll,{radius:14,color:col,dashArray:'4 3',weight:2.5,fillColor:col,fillOpacity:.25}).addTo(fgB)
+     .bindTooltip(`<b>${(d.area||'').split('/')[0].trim()}</b><br>${pin} · <span style="color:#c96a10;font-weight:700">${fmt(d.med)}</span>`,{permanent:true,direction:'bottom',className:'subarea'});
+    latSum+=ll[0];lngSum+=ll[1];n++;
+  });
+  if(n){
+    const anchor = best || L.latLng(latSum/n,lngSum/n);
+    L.tooltip({permanent:true,direction:'center',className:'cname'})
+      .setLatLng(anchor).setContent(`<span style="color:${col}">${c.name}</span>`).addTo(mapB);
+  }
+});
+fgB.addTo(mapB);
+mapB.fitBounds(fgB.getBounds().pad(0.03));
+const legB=ids.map(cid=>{
+  const c=CB[cid], m=c.pins.reduce((a,p)=>a+p.med,0);
+  return `<div class="row"><span><span class="sw" style="background:${colors[cid]}"></span>${c.name}</span><span class="n">${fmt(m)} meditators</span></div>`;
+}).join('');
+const gm=ids.reduce((a,cid)=>a+CB[cid].pins.reduce((x,p)=>x+p.med,0),0);
+const gp=ids.reduce((a,cid)=>a+CB[cid].pins.reduce((x,p)=>x+p.pot,0),0);
+document.getElementById('legB').innerHTML=`<b class="title">Centers (15)</b>${legB}`;
+document.getElementById('tagB').innerHTML=`Meditators <b style="color:#c96a10">${fmt(gm)}</b> · Potential <b style="color:#3a63c9">${fmt(gp)}</b><br>Data: Ishangam · 2026-07-10`;
+
+// ---------- PAGE 2 : KARNATAKA ----------
+// [name, lat, lng, meditators, potential]
+const KA=[
+ ["Ballari",15.1394,76.9214,486,19414],
+ ["Belagavi",15.8497,74.4977,1716,43603],
+ ["Hubballi (Dharwad)",15.3647,75.1240,1926,37284],
+ ["Kodagu (Madikeri)",12.4244,75.7382,324,7423],
+ ["Mangaluru",12.9141,74.8560,2107,32608],
+ ["Mysuru",12.2958,76.6394,4449,66031],
+ ["Shivamogga",13.9299,75.5681,963,26175],
+ ["Mandya",12.5218,76.8951,649,14656],
+ ["Tumakuru",13.3379,77.1173,1277,26560],
+ ["Chamarajanagar",11.9261,76.9438,287,7740],
+ ["Chikkamagaluru",13.3161,75.7720,551,13349],
+ ["Hassan",13.0068,76.0996,623,16973],
+ ["Ramanagara",12.7223,77.2810,242,8891],
+ ["Chikkaballapura",13.4355,77.7315,883,15867],
+ ["Kalaburagi",17.3297,76.8343,783,21306],
+ ["Uttara Kannada (Sirsi)",14.6197,74.8354,542,16012],
+ ["Bidar",17.9104,77.5199,387,12244],
+ ["Vijayapura",16.8302,75.7100,745,18726],
+ ["Raichur",16.2076,77.3463,322,15005],
+ ["Yadgir",16.7625,77.1376,89,6044],
+ ["Davangere",14.4644,75.9218,582,20300],
+ ["Udupi",13.3409,74.7421,1103,20202],
+ ["Kolar",13.1357,78.1326,727,23718],
+ ["Haveri",14.7935,75.4045,279,12697],
+ ["Bagalkot",16.1691,75.6615,446,21396],
+ ["Chitradurga",14.2226,76.4006,376,14222],
+ ["Gadag",15.4304,75.6300,300,12458],
+ ["Koppal",15.3459,76.1548,230,12513],
+ ["Vijayanagara (Hosapete)",15.2689,76.3909,265,11630],
+ ["Bangalore Rural",13.2946,77.5364,1316,25132]
+];
+const BLR_CLUSTER=[12.9716,77.5946, gm, gp];
+const mapK=L.map('mapK',{zoomSnap:0.1,zoomControl:false});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap © CARTO'}).addTo(mapK);
+const fgK=L.featureGroup();
+const rad=m=>Math.max(9,Math.sqrt(m)/3.2);
+KA.forEach(([name,lat,lng,med,pot])=>{
+  L.circleMarker([lat,lng],{radius:rad(med),color:'#b35c0e',weight:2,fillColor:'#f28c28',fillOpacity:.75}).addTo(fgK)
+   .bindTooltip(`<b>${name}</b><br><span class="m">${fmt(med)} med</span> · <span class="p">${fmt(pot)} pot</span>`,{permanent:true,direction:'bottom',offset:[0,6],className:'kname'});
+});
+L.circleMarker([BLR_CLUSTER[0],BLR_CLUSTER[1]],{radius:rad(BLR_CLUSTER[2]),color:'#7a2e04',weight:3,fillColor:'#e05e3d',fillOpacity:.8}).addTo(fgK)
+ .bindTooltip(`<b>BENGALURU — 15 centers</b><br><span class="m">${fmt(BLR_CLUSTER[2])} med</span> · <span class="p">${fmt(BLR_CLUSTER[3])} pot</span><br><span style="font-size:12px;color:#6b7280">see Bengaluru A1 map</span>`,{permanent:true,direction:'right',offset:[14,0],className:'kname'});
+fgK.addTo(mapK);
+mapK.fitBounds(fgK.getBounds().pad(0.06));
+const kaM=KA.reduce((a,x)=>a+x[3],0)+BLR_CLUSTER[2], kaP=KA.reduce((a,x)=>a+x[4],0)+BLR_CLUSTER[3];
+document.getElementById('tagK').innerHTML=`Meditators <b style="color:#c96a10">${fmt(kaM)}</b> · Potential <b style="color:#3a63c9">${fmt(kaP)}</b><br>Data: Ishangam · 2026-07-10`;
+document.getElementById('legK').innerHTML=`<b class="title">Reading the map</b>
+ <div class="row"><span><span class="sw" style="background:#f28c28"></span>District / taluk center</span><span class="n">bubble ∝ meditators</span></div>
+ <div class="row"><span><span class="sw" style="background:#e05e3d"></span>Bengaluru cluster</span><span class="n">15 urban centers</span></div>
+ <div class="row"><span style="color:#6b7280">"Karnataka - Others" bucket (${fmt(1798)} med) has no location and is not plotted.</span></div>`;
+
+setTimeout(()=>{mapB.invalidateSize();mapK.invalidateSize();},400);
+window.addEventListener('beforeprint',()=>{mapB.invalidateSize();mapK.invalidateSize();});
+</script>
+</body>
+</html>
