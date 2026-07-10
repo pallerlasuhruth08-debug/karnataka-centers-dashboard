@@ -44,6 +44,12 @@
     <div class="chart-box"><canvas id="cmpChart" height="440"></canvas></div>
   </section>
 
+  <section class="panel">
+    <h2>Statewide initiations by year</h2>
+    <div class="hint" id="yearHint"></div>
+    <div class="chart-box"><canvas id="yearChart" height="280"></canvas></div>
+  </section>
+
   <div class="count-note" id="countNote"></div>
   <section class="grid" id="cards"></section>
   <section class="panel" id="tablePanel" style="display:none">
@@ -159,6 +165,20 @@ document.getElementById('metricToggle').onclick=e=>{
   [...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===e.target));drawChart();
 };
 drawChart();
+
+// statewide year-wise initiation chart
+const SY=D.statewide_yearly, legacyPct=(D.statewide_legacy/tm*100).toFixed(1);
+document.getElementById('yearHint').textContent=
+  `Online = registered with an Inner Engineering Online (ieo) date. In-person = has an IE date but no ieo date. `+
+  `${fmt(D.statewide_legacy)} meditators statewide (${legacyPct}%) have no usable initiation date in Ishangam and aren't shown here — mostly pre-2007 records or manual data-entry gaps, not necessarily recent.`;
+new Chart(document.getElementById('yearChart'),{type:'bar',
+  data:{labels:SY.map(y=>String(y.year)),datasets:[
+    {label:'In-person',data:SY.map(y=>y.offline),backgroundColor:'#f28c28',borderRadius:3,stack:'s'},
+    {label:'Online',data:SY.map(y=>y.online),backgroundColor:'#4cc38a',borderRadius:3,stack:'s'}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#e8eaf0'}}},
+    scales:{x:{stacked:true,grid:{display:false},ticks:{color:'#9aa1b5',font:{size:11}}},
+            y:{stacked:true,grid:{color:'#2a2f3e'},ticks:{color:'#9aa1b5'}}}}});
 </script>
 </body>
 </html>

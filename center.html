@@ -36,6 +36,12 @@
   </div>
 
   <section class="panel">
+    <h2>Initiations by year</h2>
+    <div class="hint" id="yearHint"></div>
+    <div class="chart-box"><canvas id="yearChart" height="280"></canvas></div>
+  </section>
+
+  <section class="panel">
     <h2>Pincode breakdown</h2>
     <div class="hint">Click column headers to sort. Conversion = meditators ÷ total contacts in that pincode.</div>
     <div class="controls" style="margin:0 0 10px"><input type="search" id="pq" placeholder="Filter pincode or area…"></div>
@@ -114,6 +120,21 @@ new Chart(document.getElementById('cityChart'),{type:'doughnut',
   data:{labels:c.cities.map(x=>x[0]),datasets:[{data:c.cities.map(x=>x[1]+x[2]),backgroundColor:palette,borderColor:'#181b24',borderWidth:2}]},
   options:{responsive:true,maintainAspectRatio:false,
     plugins:{legend:{position:'right',labels:{color:'#e8eaf0',font:{size:11},boxWidth:12}}}}});
+
+// year chart — initiations by year, split online vs in-person
+const yearLabels=c.yearly.map(y=>String(y.year));
+const legacyPct=(c.legacy/(c.med||1)*100).toFixed(1);
+document.getElementById('yearHint').textContent=
+  `Online = registered with an Inner Engineering Online (ieo) date. In-person = has an IE date but no ieo date. `+
+  `${fmt(c.legacy)} meditators (${legacyPct}%) have no usable initiation date in Ishangam and aren't shown here — mostly pre-2007 records or manual data-entry gaps, not necessarily recent.`;
+new Chart(document.getElementById('yearChart'),{type:'bar',
+  data:{labels:yearLabels,datasets:[
+    {label:'In-person',data:c.yearly.map(y=>y.offline),backgroundColor:'#f28c28',borderRadius:3,stack:'s'},
+    {label:'Online',data:c.yearly.map(y=>y.online),backgroundColor:'#4cc38a',borderRadius:3,stack:'s'}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#e8eaf0'}}},
+    scales:{x:{stacked:true,grid:{display:false},ticks:{color:'#9aa1b5',font:{size:11}}},
+            y:{stacked:true,grid:{color:'#2a2f3e'},ticks:{color:'#9aa1b5'}}}}});
 
 // table
 let rows=c.pins.map(p=>({zip:p[0],area:p[1],med:p[2],pot:p[3],total:p[2]+p[3],
