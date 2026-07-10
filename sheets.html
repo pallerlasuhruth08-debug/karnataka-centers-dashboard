@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bangalore Center Planning Sheets (A3)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@page { size: A3 landscape; margin: 0; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:#1c2333;background:#666}
+.sheet{width:420mm;height:296mm;background:#fff;margin:8px auto;padding:9mm 11mm;overflow:hidden;position:relative;page-break-after:always;break-after:page}
+.no-print{position:fixed;top:10px;right:14px;z-index:9999;display:flex;gap:8px}
+.no-print button,.no-print a{background:#f28c28;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:15px;font-weight:600;cursor:pointer;text-decoration:none}
+.no-print a.sec{background:#1c2333}
+@media print{ body{background:#fff} .sheet{margin:0} .no-print{display:none} .idx{display:none} }
+.hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #f28c28;padding-bottom:4mm;margin-bottom:5mm}
+.hdr h1{font-size:26px} .hdr .tag{color:#6b7280;font-size:13px;text-align:right}
+.hdr .eyebrow{color:#e05e3d;font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+.cols{display:flex;gap:8mm;height:calc(100% - 30mm)}
+#map{flex:1;height:100%;border:1.5px solid #cbd2e0;border-radius:6px}
+.side{width:96mm;display:flex;flex-direction:column;gap:4mm}
+.legend,.arealist{border:1.5px solid #cbd2e0;border-radius:6px;padding:4mm;font-size:12.5px}
+.legend b,.arealist b{display:block;margin-bottom:2mm;font-size:13.5px}
+.sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px}
+.arealist table{width:100%;border-collapse:collapse;font-size:12px}
+.arealist td,.arealist th{padding:3px 4px;border-bottom:1px solid #e4e8f2;text-align:left}
+.arealist td.n{text-align:right;font-weight:600}
+.kpis{display:flex;gap:5mm;margin-bottom:4mm}
+.kpi{flex:1;border:1.5px solid #cbd2e0;border-left:4px solid #f28c28;border-radius:6px;padding:3mm 4mm}
+.kpi .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:#6b7280}
+.kpi .v{font-size:23px;font-weight:700} .kpi .s{font-size:11px;color:#6b7280}
+table.data{width:100%;border-collapse:collapse;font-size:12.5px}
+table.data th{background:#1c2333;color:#fff;padding:6px 6px;text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em}
+table.data th:nth-child(1),table.data th:nth-child(2){text-align:left}
+table.data th.grp-m{background:#7a4310} table.data th.grp-p{background:#2c4585}
+table.data td{padding:4px 6px;border-bottom:1px solid #dfe4ee;text-align:right}
+table.data td.pin{font-weight:700;text-align:left} table.data td.area{text-align:left;color:#444;max-width:52mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table.data td.strong{color:#c96a10;font-weight:700} table.data td.pot{color:#3a63c9}
+table.data tr.total td{border-top:2.5px solid #1c2333;font-weight:700;background:#f6f7fb}
+.pill{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:999px;font-weight:700;margin-left:4px}
+.pill.up{background:#d9f2e5;color:#0f7a45} .pill.dn{background:#fbe1da;color:#b23217} .pill.na{background:#eceef4;color:#8a90a3}
+.charts{display:flex;gap:8mm;margin-top:4mm;height:60mm}
+.chartbox{flex:1.5;border:1.5px solid #cbd2e0;border-radius:6px;padding:3mm}
+.chartbox h3{font-size:13px;margin-bottom:1mm} .chartbox .note{font-size:10.5px;color:#6b7280}
+.chartbox canvas{max-height:46mm}
+.ws-note{background:#fdf3e7;border:1.5px solid #f28c28;border-radius:6px;padding:3mm 4mm;font-size:12.5px;margin-bottom:4mm}
+table.work{width:100%;border-collapse:collapse;table-layout:fixed}
+table.work th{background:#1c2333;color:#fff;padding:6px;font-size:11.5px;text-transform:uppercase}
+table.work td{border:1.2px solid #97a0b5;height:11.5mm;padding:2px 5px;font-size:11px;color:#8b93a8;vertical-align:top}
+table.work td.guide{color:#454d63;font-size:10.5px}
+.buckets{display:flex;gap:4mm;margin:3mm 0 4mm}
+.bucket{flex:1;border:1.5px solid #cbd2e0;border-radius:6px;padding:2.5mm 3mm;font-size:11px}
+.bucket b{font-size:12px;display:block}
+.two-col{display:flex;gap:8mm}
+.foot{position:absolute;bottom:5mm;left:11mm;right:11mm;display:flex;justify-content:space-between;font-size:10.5px;color:#8a90a3;border-top:1px solid #dfe4ee;padding-top:2mm}
+.idx{max-width:900px;margin:40px auto;background:#fff;border-radius:12px;padding:30px}
+.idx h1{margin-bottom:6px} .idx p{color:#555;margin-bottom:18px}
+.idx a.c{display:flex;justify-content:space-between;padding:12px 16px;border:1.5px solid #cbd2e0;border-radius:8px;margin-bottom:8px;text-decoration:none;color:#1c2333;font-weight:600}
+.idx a.c:hover{border-color:#f28c28;background:#fdf3e7}
+.idx a.c span{color:#6b7280;font-weight:400;font-size:13px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="blr-data.js"></script>
+<script>
+const D = window.BLR_SHEETS, YRS = D.years;
+const fmt = n => n.toLocaleString('en-IN');
+const id = new URLSearchParams(location.search).get('id');
+const root = document.getElementById('root');
+
+if(!id || !D.centers[id]){
+  // ---------- INDEX ----------
+  document.title = 'Bangalore Center Planning Sheets';
+  const items = Object.entries(D.centers).sort((a,b)=>a[1].name.localeCompare(b[1].name))
+    .map(([cid,c])=>{
+      const tm=c.pins.reduce((a,p)=>a+p.med,0), tp=c.pins.reduce((a,p)=>a+p.pot,0);
+      return `<a class="c" href="sheets.html?id=${cid}">${c.name}<span>${fmt(tm)} meditators · ${fmt(tp)} potential · ${c.polys.length} boundary polygons</span></a>`;
+    }).join('');
+  root.innerHTML = `<div class="idx"><h1>Bangalore Center Planning Sheets</h1>
+    <p>Open a center, then use the Print button (A3 landscape, background graphics ON). Each pack = zoomed catchment map + pincode indicators + working sheet.</p>
+    ${items}
+    <p style="margin-top:14px;font-size:12px">Data: Ishangam (Santosha) · ${D.asof} · Active = last transaction within 12 months</p></div>`;
+} else {
+  buildCenter(id);
+}
+
+function buildCenter(cid){
+  const c = D.centers[cid];
+  document.title = c.name + ' — Center Planning Sheets (A3)';
+  const P = c.pins;
+  const tot = k => P.reduce((a,p)=>a+p[k],0);
+  const tm=tot('med'), tp=tot('pot'), tam=tot('am'), tap=tot('ap'), tb=tot('bsp');
+  const sum3=(p,from)=>{const i0=YRS.indexOf(String(from));return p.years.slice(i0,i0+3).reduce((a,b)=>a+b,0);};
+  const y26=P.reduce((a,p)=>a+p.years[YRS.indexOf('2026')],0);
+  const ctotY = YRS.map((y,i)=>P.reduce((a,p)=>a+p.years[i],0));
+
+  const spark=(vals)=>{
+    const mx=Math.max(...vals); if(!mx) return '';
+    const w=180,h=30,n=vals.length,bw=w/n-1.5;
+    return '<svg width="'+w+'" height="'+h+'">'+vals.map((v,i)=>{
+      const bh=v/mx*(h-3), x=i*(w/n), col=i>=n-3?'#f28c28':'#b9c2d8';
+      return `<rect x="${x.toFixed(1)}" y="${(h-bh).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}"/>`;
+    }).join('')+'</svg>';
+  };
+
+  const rowsHtml = P.map(p=>{
+    const prev=sum3(p,2021), rec=sum3(p,2024);
+    let trend;
+    if(p.med<10){ trend='<span class="pill na">—</span>'; }
+    else{
+      const pct = prev? Math.round((rec-prev)/prev*100) : null;
+      const pill = pct===null?'<span class="pill na">new</span>':`<span class="pill ${pct>=0?'up':'dn'}">${pct>=0?'+':''}${pct}%</span>`;
+      trend = `${fmt(prev)} → <b>${fmt(rec)}</b> ${pill}`;
+    }
+    return `<tr>
+      <td class="pin">${p.pin}</td><td class="area">${p.area}</td>
+      <td class="strong">${fmt(p.med)}</td><td>${fmt(p.am)}</td><td><b>${p.med?Math.round(p.am/p.med*100):0}%</b></td>
+      <td class="pot">${fmt(p.pot)}</td><td>${fmt(p.ap)}</td><td><b>${p.pot?Math.round(p.ap/p.pot*100):0}%</b></td>
+      <td>${fmt(p.bsp)}</td>
+      <td>${p.years[YRS.indexOf('2024')]}</td><td>${p.years[YRS.indexOf('2025')]}</td><td><b>${p.years[YRS.indexOf('2026')]}</b></td>
+      <td style="white-space:nowrap">${trend}</td>
+      <td>${spark(p.years)}</td></tr>`;
+  }).join('');
+
+  const areaRows = P.map(p=>`<tr><td><b>${p.pin}</b></td><td>${p.area}</td><td class="n">${fmt(p.med)}</td><td class="n" style="color:#3a63c9">${fmt(p.pot)}</td></tr>`).join('');
+  const noPoly = P.filter(p=>p.pin!=='OTH' && !c.polys.some(q=>q.pin===p.pin) && !(c.approx&&c.approx[p.pin])).map(p=>p.pin+' '+p.area);
+
+  root.innerHTML = `
+  <div class="no-print"><a class="sec" href="sheets.html">← All centers</a><button onclick="window.print()">Print ${c.name} pack (A3 landscape)</button></div>
+
+  <section class="sheet">
+    <div class="hdr">
+      <div><div class="eyebrow">KA Regional Meet · Center Mapping Exercise · Sheet 1 of 3</div>
+      <h1>${c.name} — Catchment Map</h1></div>
+      <div class="tag">Meditators <b style="color:#c96a10">${fmt(tm)}</b> · Potential <b style="color:#3a63c9">${fmt(tp)}</b><br>Data: Ishangam · ${D.asof}</div>
+    </div>
+    <div class="cols">
+      <div id="map"></div>
+      <div class="side">
+        <div class="legend"><b>Meditator strength (shading)</b>
+          <div><span class="sw" style="background:#7a2e04"></span>2,000+ meditators</div>
+          <div><span class="sw" style="background:#e0661a"></span>500 – 1,999</div>
+          <div><span class="sw" style="background:#f5a55f"></span>100 – 499</div>
+          <div><span class="sw" style="background:#fbd9b8"></span>&lt; 100</div>
+          <div style="margin-top:2mm"><span class="sw" style="background:#fff;border:2px dashed #3a63c9"></span>No boundary on record — approx. location</div>
+        </div>
+        <div class="arealist" style="flex:1;overflow:hidden"><b>Pincodes & localities in this catchment</b>
+          <table><tr><th>Pincode</th><th>Locality</th><th style="text-align:right">Med</th><th style="text-align:right">Pot</th></tr>${areaRows}</table>
+          ${noPoly.length?`<div style="margin-top:2mm;font-size:11px;color:#b23217">No map boundary available for: ${noPoly.join(', ')} — see table on Sheet 2.</div>`:''}
+          <div style="margin-top:2mm;font-size:11px;color:#6b7280">Exercise: mark where meditators cluster, where sathsangs happen today, and circle sub-areas for Sheet 3.</div>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>Boundaries: India Post pincode polygons (center boundary map)</span><span>Isha Karnataka · ${c.name}</span></div>
+  </section>
+
+  <section class="sheet">
+    <div class="hdr">
+      <div><div class="eyebrow">KA Regional Meet · Center Mapping Exercise · Sheet 2 of 3</div>
+      <h1>${c.name} — Pincode Health Indicators</h1></div>
+      <div class="tag">Active = last transaction within 12 months · as of ${D.asof}</div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="l">Meditators</div><div class="v" style="color:#c96a10">${fmt(tm)}</div><div class="s">initiated, mapped to center</div></div>
+      <div class="kpi"><div class="l">Active meditators (12m)</div><div class="v">${fmt(tam)}</div><div class="s"><b>${Math.round(tam/tm*100)}%</b> of meditators</div></div>
+      <div class="kpi"><div class="l">Potential</div><div class="v" style="color:#3a63c9">${fmt(tp)}</div><div class="s">non-initiated contacts</div></div>
+      <div class="kpi"><div class="l">Active potential (12m)</div><div class="v">${fmt(tap)}</div><div class="s"><b>${Math.round(tap/tp*100)}%</b> of potential</div></div>
+      <div class="kpi"><div class="l">Bhava Spandana</div><div class="v">${fmt(tb)}</div><div class="s"><b>${Math.round(tb/tm*100)}%</b> of meditators did BSP</div></div>
+      <div class="kpi"><div class="l">New meditators 2026</div><div class="v">${fmt(y26)}</div><div class="s">${c.target?('IE target 2026: '+fmt(c.target)):'till '+D.asof}</div></div>
+    </div>
+    <table class="data">
+      <thead><tr>
+        <th rowspan="2">Pincode</th><th rowspan="2">Locality</th>
+        <th colspan="3" class="grp-m">Meditators</th>
+        <th colspan="3" class="grp-p">Potential meditators</th>
+        <th rowspan="2">BSP<br>done</th>
+        <th colspan="3">New meditators</th>
+        <th rowspan="2">3-yr trend<br>2021-23 → 2024-26</th><th rowspan="2">Initiations 2008 → 2026</th>
+      </tr><tr>
+        <th class="grp-m">Count</th><th class="grp-m">Active 12m</th><th class="grp-m">Active %</th>
+        <th class="grp-p">Count</th><th class="grp-p">Active 12m</th><th class="grp-p">Active %</th>
+        <th>'24</th><th>'25</th><th>'26</th>
+      </tr></thead>
+      <tbody>${rowsHtml}
+        <tr class="total"><td>TOTAL</td><td></td>
+        <td>${fmt(tm)}</td><td>${fmt(tam)}</td><td>${Math.round(tam/tm*100)}%</td>
+        <td>${fmt(tp)}</td><td>${fmt(tap)}</td><td>${Math.round(tap/tp*100)}%</td>
+        <td>${fmt(tb)}</td>
+        <td>${ctotY[YRS.indexOf('2024')]}</td><td>${ctotY[YRS.indexOf('2025')]}</td><td>${ctotY[YRS.indexOf('2026')]}</td>
+        <td>${fmt(P.reduce((a,p)=>a+sum3(p,2021),0))} → <b>${fmt(P.reduce((a,p)=>a+sum3(p,2024),0))}</b></td><td></td></tr>
+      </tbody>
+    </table>
+    <div class="charts">
+      <div class="chartbox" style="flex:2"><h3>New meditators per year — whole center</h3>
+        <div class="note">2020 dip = pandemic (in-person IE paused). Orange = last 3 years. Meditators with no recorded initiation date are not on this timeline.</div>
+        <canvas id="yearChart"></canvas></div>
+      <div class="chartbox"><h3>Meditators vs potential by pincode</h3>
+        <div class="note">Orange = meditators, blue = potential.</div>
+        <canvas id="shareChart"></canvas></div>
+    </div>
+    <div class="foot"><span>3-yr trend = new meditators added in 2021-23 vs 2024-26 · Active % uses each column's own base</span><span>Source: Ishangam (Santosha), extracted ${D.asof}</span></div>
+  </section>
+
+  <section class="sheet">
+    <div class="hdr">
+      <div><div class="eyebrow">KA Regional Meet · Center Mapping Exercise · Sheet 3 of 3</div>
+      <h1>${c.name} — Area Growth Working Sheet</h1></div>
+      <div class="tag">Fill by hand as a team · refer to Sheets 1 & 2</div>
+    </div>
+    <div class="ws-note"><b>How to use:</b> Looking at the map and the pincode indicators, list the areas / sub-areas in your catchment. For each, mark where it stands <b>today</b>, and what you commit it becomes in <b>1 year</b> and in <b>5 years</b>. An area may be in no bucket today — that's a <b>Potential Area (PA)</b>.</div>
+    <div class="buckets">
+      <div class="bucket"><b>PA — Potential Area</b>Meditators exist, no regular gathering yet</div>
+      <div class="bucket"><b>MC — Micro-center</b>Regular sathsang / sadhana support point run by local volunteers</div>
+      <div class="bucket"><b>SC — Sub-center</b>Dedicated space, weekly activities, hosts programs with center support</div>
+      <div class="bucket"><b>FC — Full-fledged Center</b>Daily activities, own volunteer base, runs its own program calendar</div>
+    </div>
+    <table class="work">
+      <colgroup><col style="width:4%"><col style="width:16%"><col style="width:8%"><col style="width:10%"><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:23%"><col style="width:12%"></colgroup>
+      <thead><tr><th>#</th><th>Area / Sub-area</th><th>Pincode</th><th>Meditator strength (approx)</th><th>Today<br>PA/MC/SC/FC</th><th>In 1 year</th><th>In 5 years</th><th>What has to happen (key actions)</th><th>Who owns it</th></tr></thead>
+      <tbody>
+        <tr><td class="guide">e.g.</td><td class="guide">Neeladri Nagar</td><td class="guide">560100</td><td class="guide">~180</td><td class="guide">PA</td><td class="guide">MC</td><td class="guide">SC</td><td class="guide">Weekly sathsang from Aug; identify 2 hosts</td><td class="guide">—</td></tr>
+        ${Array.from({length:10},(_,i)=>`<tr><td class="guide">${i+1}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="two-col" style="margin-top:4mm">
+      <div style="flex:1">
+        <table class="work">
+          <thead><tr><th style="text-align:left">Consolidation — areas in each bucket</th><th>Today</th><th>In 1 year</th><th>In 5 years</th></tr></thead>
+          <tbody>
+            <tr><td class="guide">Potential Areas (PA)</td><td></td><td></td><td></td></tr>
+            <tr><td class="guide">Micro-centers (MC)</td><td></td><td></td><td></td></tr>
+            <tr><td class="guide">Sub-centers (SC)</td><td></td><td></td><td></td></tr>
+            <tr><td class="guide">Full-fledged Centers (FC)</td><td></td><td></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="flex:1">
+        <table class="work">
+          <thead><tr><th style="text-align:left" colspan="2">Next 90 days — top 3 commitments</th></tr></thead>
+          <tbody>
+            <tr><td class="guide" style="width:6%">1</td><td></td></tr>
+            <tr><td class="guide">2</td><td></td></tr>
+            <tr><td class="guide">3</td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="foot"><span>Team members present: ______________________________________________</span><span>Date: __________</span></div>
+  </section>`;
+
+  // map
+  const byPin = Object.fromEntries(P.map(p=>[p.pin,p]));
+  const shade = m => m>=2000?'#7a2e04':m>=500?'#e0661a':m>=100?'#f5a55f':'#fbd9b8';
+  const map = L.map('map',{zoomSnap:0.25});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+  const fg = L.featureGroup();
+  const tip = (pin,d)=>`<div style="text-align:center;font-size:12px;line-height:1.25"><b>${pin}</b><br>${d?d.area:''}<br><span style="color:#c96a10;font-weight:700">${d?fmt(d.med):0} med</span> · <span style="color:#3a63c9">${d?fmt(d.pot):0} pot</span></div>`;
+  c.polys.forEach(p=>{
+    const d = byPin[p.pin];
+    L.polygon(p.coords,{color:'#5a3212',weight:1.6,fillColor:shade(d?d.med:0),fillOpacity:0.55}).addTo(fg)
+     .bindTooltip(tip(p.pin,d),{permanent:true,direction:'center',className:'plabel'});
+  });
+  Object.entries(c.approx||{}).forEach(([pin,ll])=>{
+    L.circleMarker(ll,{radius:16,color:'#3a63c9',dashArray:'4 3',weight:2.5,fillColor:'#dbe6ff',fillOpacity:.85}).addTo(fg)
+     .bindTooltip(tip(pin,byPin[pin]),{permanent:true,direction:'bottom',className:'plabel'});
+  });
+  fg.addTo(map);
+  map.fitBounds(fg.getBounds().pad(0.08));
+  const st=document.createElement('style');st.textContent='.plabel{background:rgba(255,255,255,.92);border:1px solid #97a0b5;border-radius:5px;box-shadow:none;padding:3px 6px} .plabel:before{display:none}';document.head.appendChild(st);
+
+  // charts
+  new Chart(document.getElementById('yearChart'),{type:'bar',
+   data:{labels:YRS,datasets:[{data:ctotY,backgroundColor:YRS.map(y=>+y>=2024?'#f28c28':'#8fa0c4'),borderRadius:3}]},
+   options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},
+     scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#e4e8f2'}}}}});
+  const shr = P.filter(p=>p.pin!=='OTH').slice(0,8);
+  new Chart(document.getElementById('shareChart'),{type:'bar',
+   data:{labels:shr.map(p=>p.pin),datasets:[
+     {label:'Meditators',data:shr.map(p=>p.med),backgroundColor:'#f28c28'},
+     {label:'Potential',data:shr.map(p=>p.pot),backgroundColor:'#5b8def'}]},
+   options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:false,
+     plugins:{legend:{labels:{boxWidth:12,font:{size:10}}}},
+     scales:{x:{stacked:true,grid:{color:'#e4e8f2'},ticks:{font:{size:9}}},y:{stacked:true,grid:{display:false},ticks:{font:{size:10}}}}}});
+  setTimeout(()=>map.invalidateSize(),400);
+  window.addEventListener('beforeprint',()=>map.invalidateSize());
+}
+</script>
+</body>
+</html>
