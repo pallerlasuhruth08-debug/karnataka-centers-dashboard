@@ -1,0 +1,1 @@
+Karnataka Isha Centers - Meditators & Potential Dashboard. Pincode-level view of meditators and potential contacts for all Karnataka centers, sourced from Ishangam (Santosha). Live site: GitHub Pages. Files: index.html (statewide view), center.html (per-center report), data.js (extracted aggregates), styles.css.
