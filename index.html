@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Karnataka Centers — Meditators & Potential Dashboard</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="eyebrow">Karnataka Region · Ishangam</div>
+    <h1>Karnataka Centers — Meditators & Potential</h1>
+    <p class="sub">Statewide view of existing meditators and potential (non-initiated contacts) across every Isha center in Karnataka, with pincode-level drill-downs. Click any center for its full report.</p>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <div class="controls">
+    <input type="search" id="q" placeholder="Search center…">
+    <div class="chips" id="sectorChips"></div>
+    <select id="sortSel">
+      <option value="med">Sort: Meditators</option>
+      <option value="pot">Sort: Potential</option>
+      <option value="total">Sort: Total contacts</option>
+      <option value="conv">Sort: Conversion %</option>
+      <option value="name">Sort: Name (A–Z)</option>
+    </select>
+    <div class="toggle" id="viewToggle">
+      <button data-v="cards" class="on">Cards</button>
+      <button data-v="table">Table</button>
+    </div>
+  </div>
+
+  <section class="panel">
+    <h2>Center comparison</h2>
+    <div class="hint">Top centers by selected metric — click a bar to open that center. Use the toggle to switch metric.</div>
+    <div class="toggle" id="metricToggle" style="margin-bottom:12px">
+      <button data-m="med" class="on">Meditators</button>
+      <button data-m="pot">Potential</button>
+      <button data-m="conv">Conversion %</button>
+    </div>
+    <div class="chart-box"><canvas id="cmpChart" height="440"></canvas></div>
+  </section>
+
+  <div class="count-note" id="countNote"></div>
+  <section class="grid" id="cards"></section>
+  <section class="panel" id="tablePanel" style="display:none">
+    <div class="tblwrap">
+      <table id="tbl">
+        <thead><tr>
+          <th data-k="name">Center</th><th data-k="sector">Sector</th>
+          <th data-k="med" class="sorted">Meditators</th><th data-k="pot">Potential</th>
+          <th data-k="total">Total</th><th data-k="conv">Conversion</th><th data-k="target">IE Target ’26</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    Source: Ishangam (Santosha) · Odoo — region Karnataka · Extracted <span id="gen"></span> ·
+    Meditators = contacts marked as meditator · Potential = non-initiated contacts mapped to the center
+  </footer>
+</div>
+
+<script src="data.js"></script>
+<script>
+const D = window.KA_DATA, C = D.centers;
+const fmt = n => n.toLocaleString('en-IN');
+const conv = c => c.med + c.pot ? c.med / (c.med + c.pot) * 100 : 0;
+document.getElementById('gen').textContent = D.generated;
+
+// KPIs
+const tm = C.reduce((a,c)=>a+c.med,0), tp = C.reduce((a,c)=>a+c.pot,0);
+const bestConv = [...C].filter(c=>c.med+c.pot>1000).sort((a,b)=>conv(b)-conv(a))[0];
+document.getElementById('kpis').innerHTML = `
+  <div class="kpi"><div class="lbl">Centers</div><div class="val">${C.length}</div><div class="note">across Karnataka</div></div>
+  <div class="kpi hl"><div class="lbl">Meditators</div><div class="val">${fmt(tm)}</div><div class="note">initiated & mapped</div></div>
+  <div class="kpi"><div class="lbl">Potential</div><div class="val">${fmt(tp)}</div><div class="note">non-initiated contacts</div></div>
+  <div class="kpi"><div class="lbl">Statewide conversion</div><div class="val">${(tm/(tm+tp)*100).toFixed(1)}%</div><div class="note">meditators ÷ all contacts</div></div>
+  <div class="kpi"><div class="lbl">Best conversion</div><div class="val">${conv(bestConv).toFixed(1)}%</div><div class="note">${bestConv.name}</div></div>`;
+
+// Sector chips
+const sectors = ['All', ...new Set(C.map(c=>c.sector))];
+let sector='All', q='', sortK='med', view='cards';
+const chipBox = document.getElementById('sectorChips');
+sectors.forEach(s=>{
+  const b=document.createElement('button');b.className='chip'+(s==='All'?' on':'');b.textContent=s;
+  b.onclick=()=>{sector=s;[...chipBox.children].forEach(x=>x.classList.toggle('on',x===b));render();};
+  chipBox.appendChild(b);
+});
+document.getElementById('q').oninput=e=>{q=e.target.value.toLowerCase();render();};
+document.getElementById('sortSel').onchange=e=>{sortK=e.target.value;render();};
+document.getElementById('viewToggle').onclick=e=>{
+  if(!e.target.dataset.v)return;view=e.target.dataset.v;
+  [...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===e.target));render();
+};
+
+function filtered(){
+  let r=C.filter(c=>(sector==='All'||c.sector===sector)&&c.name.toLowerCase().includes(q));
+  const key={med:c=>-c.med,pot:c=>-c.pot,total:c=>-(c.med+c.pot),conv:c=>-conv(c),name:c=>c.name};
+  return r.sort((a,b)=>{const ka=key[sortK](a),kb=key[sortK](b);return ka<kb?-1:ka>kb?1:0;});
+}
+
+function render(){
+  const r=filtered();
+  document.getElementById('countNote').textContent=`${r.length} of ${C.length} centers shown`;
+  const cards=document.getElementById('cards'), tp2=document.getElementById('tablePanel');
+  cards.style.display=view==='cards'?'':'none'; tp2.style.display=view==='table'?'':'none';
+  if(view==='cards'){
+    cards.innerHTML=r.map(c=>{
+      const cv=conv(c), tot=c.med+c.pot;
+      return `<a class="card" href="center.html?id=${c.id}">
+        <div class="top"><h3>${c.name}</h3><span class="badge">${c.sector}</span></div>
+        <div class="nums">
+          <div><div class="n med">${fmt(c.med)}</div><div class="l">Meditators</div></div>
+          <div><div class="n pot">${fmt(c.pot)}</div><div class="l">Potential</div></div>
+        </div>
+        <div class="bar"><i style="width:${Math.min(cv*6,100)}%"></i></div>
+        <div class="conv"><span>${cv.toFixed(1)}% converted</span><span>${fmt(tot)} contacts</span></div>
+      </a>`;}).join('');
+  } else {
+    document.querySelector('#tbl tbody').innerHTML=r.map(c=>{
+      const cv=conv(c);
+      const pill=cv>=9?'hi':cv>=5?'md':'lo';
+      return `<tr onclick="location='center.html?id=${c.id}'">
+        <td><b>${c.name}</b></td><td style="color:var(--muted)">${c.sector}</td>
+        <td style="color:var(--accent);font-weight:600">${fmt(c.med)}</td><td>${fmt(c.pot)}</td>
+        <td>${fmt(c.med+c.pot)}</td><td><span class="pill ${pill}">${cv.toFixed(1)}%</span></td>
+        <td>${c.target?fmt(c.target):'—'}</td></tr>`;}).join('');
+  }
+}
+render();
+
+// comparison chart
+let metric='med', chart;
+const mLabel={med:'Meditators',pot:'Potential',conv:'Conversion %'};
+function chartData(){
+  const top=[...C].sort((a,b)=>metric==='conv'?conv(b)-conv(a):b[metric]-a[metric]).slice(0,18);
+  return {labels:top.map(c=>c.name),vals:top.map(c=>metric==='conv'?+conv(c).toFixed(1):c[metric]),ids:top.map(c=>c.id)};
+}
+function drawChart(){
+  const d=chartData();
+  if(chart)chart.destroy();
+  chart=new Chart(document.getElementById('cmpChart'),{
+    type:'bar',
+    data:{labels:d.labels,datasets:[{label:mLabel[metric],data:d.vals,
+      backgroundColor:metric==='pot'?'#5b8def':'#f28c28',borderRadius:5}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      onClick:(e,els)=>{if(els.length)location='center.html?id='+d.ids[els[0].index];},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>mLabel[metric]+': '+x.parsed.x.toLocaleString('en-IN')+(metric==='conv'?'%':'')}}},
+      scales:{x:{grid:{color:'#2a2f3e'},ticks:{color:'#9aa1b5'}},y:{grid:{display:false},ticks:{color:'#e8eaf0',font:{size:12}}}}}
+  });
+}
+document.getElementById('metricToggle').onclick=e=>{
+  if(!e.target.dataset.m)return;metric=e.target.dataset.m;
+  [...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===e.target));drawChart();
+};
+drawChart();
+</script>
+</body>
+</html>

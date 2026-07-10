@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Center Report — Karnataka Dashboard</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← All Karnataka centers</a>
+  <header class="site">
+    <div class="eyebrow" id="crumb">Center report</div>
+    <h1 id="title"></h1>
+    <p class="sub" id="subtitle"></p>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+  <section class="insights" id="insights"></section>
+
+  <div class="two">
+    <section class="panel">
+      <h2>Top pincodes — meditators vs potential</h2>
+      <div class="hint">The 15 largest pincodes in this center's catchment. Orange = existing meditators, blue = potential.</div>
+      <div class="chart-box"><canvas id="pinChart" height="430"></canvas></div>
+    </section>
+    <section class="panel">
+      <h2>Locality mix</h2>
+      <div class="hint">Contacts by mapped city / taluk.</div>
+      <div class="chart-box"><canvas id="cityChart" height="300"></canvas></div>
+      <h2 style="margin-top:18px">Where to focus</h2>
+      <div class="hint">Pincodes ranked by untapped potential (high potential, low conversion).</div>
+      <div id="focusList"></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2>Pincode breakdown</h2>
+    <div class="hint">Click column headers to sort. Conversion = meditators ÷ total contacts in that pincode.</div>
+    <div class="controls" style="margin:0 0 10px"><input type="search" id="pq" placeholder="Filter pincode or area…"></div>
+    <div class="tblwrap">
+      <table id="ptbl">
+        <thead><tr>
+          <th data-k="zip">Pincode</th><th data-k="area">Area</th>
+          <th data-k="med" class="sorted">Meditators</th><th data-k="pot">Potential</th>
+          <th data-k="total">Total</th><th data-k="conv">Conversion</th><th data-k="opp">Opportunity</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>Source: Ishangam (Santosha) · Odoo — extracted <span id="gen"></span> · Areas for Bangalore pincodes are knowledge-based locality names; others from Ishangam's pincode master</footer>
+</div>
+
+<script src="data.js"></script>
+<script>
+const D=window.KA_DATA;
+const id=+new URLSearchParams(location.search).get('id');
+const c=D.centers.find(x=>x.id===id)||D.centers[0];
+const fmt=n=>n.toLocaleString('en-IN');
+document.getElementById('gen').textContent=D.generated;
+document.title=c.name+' — Karnataka Dashboard';
+document.getElementById('crumb').textContent='Karnataka · '+c.sector;
+document.getElementById('title').textContent=c.name+' Center';
+const tot=c.med+c.pot, cv=tot?c.med/tot*100:0;
+document.getElementById('subtitle').textContent=`${fmt(tot)} mapped contacts across ${c.pins.length} pincode groups — ${fmt(c.med)} meditators, ${fmt(c.pot)} potential.`;
+
+document.getElementById('kpis').innerHTML=`
+  <div class="kpi hl"><div class="lbl">Meditators</div><div class="val">${fmt(c.med)}</div><div class="note">initiated (IE)</div></div>
+  <div class="kpi"><div class="lbl">Potential</div><div class="val">${fmt(c.pot)}</div><div class="note">non-initiated contacts</div></div>
+  <div class="kpi"><div class="lbl">Conversion</div><div class="val">${cv.toFixed(1)}%</div><div class="note">meditators ÷ contacts</div></div>
+  <div class="kpi"><div class="lbl">IE target 2026</div><div class="val">${c.target?fmt(c.target):'—'}</div><div class="note">yearly initiation target</div></div>
+  <div class="kpi"><div class="lbl">BSP</div><div class="val">${fmt(c.bsp)}</div><div class="note">Bhava Spandana</div></div>
+  <div class="kpi"><div class="lbl">Samyama</div><div class="val">${fmt(c.samyama)}</div><div class="note">advanced sadhana</div></div>`;
+
+// insights
+const real=c.pins.filter(p=>p[0]!=='OTH');
+const topPin=real[0];
+const oppScore=p=>p[3]*(1-(p[2]/((p[2]+p[3])||1)));
+const oppSorted=[...real].sort((a,b)=>oppScore(b)-oppScore(a));
+const bigOpp=oppSorted[0];
+const dense=[...real].filter(p=>p[2]+p[3]>200).sort((a,b)=>(b[2]/(b[2]+b[3]))-(a[2]/(a[2]+a[3])))[0];
+const label=p=>p[1]?`${p[0]} · ${p[1]}`:p[0];
+document.getElementById('insights').innerHTML=`
+  <div class="insight"><b>${label(topPin)}</b><span>Largest base — ${fmt(topPin[2])} meditators, ${fmt(topPin[3])} potential</span></div>
+  <div class="insight"><b>${label(bigOpp)}</b><span>Biggest untapped pool — ${fmt(bigOpp[3])} potential at ${(bigOpp[2]/((bigOpp[2]+bigOpp[3])||1)*100).toFixed(1)}% conversion</span></div>
+  ${dense?`<div class="insight"><b>${label(dense)}</b><span>Strongest conversion — ${(dense[2]/(dense[2]+dense[3])*100).toFixed(1)}% of ${fmt(dense[2]+dense[3])} contacts</span></div>`:''}`;
+
+// focus list
+document.getElementById('focusList').innerHTML=oppSorted.slice(0,6).map((p,i)=>{
+  const pc=p[2]/((p[2]+p[3])||1)*100;
+  return `<div style="display:flex;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid var(--border);font-size:13.5px">
+    <span><b style="color:var(--accent)">${i+1}.</b> ${label(p)}</span>
+    <span style="color:var(--muted);white-space:nowrap">${fmt(p[3])} pot · ${pc.toFixed(1)}%</span></div>`;
+}).join('');
+
+// pin chart
+const top15=real.slice(0,15);
+new Chart(document.getElementById('pinChart'),{type:'bar',
+  data:{labels:top15.map(p=>p[1]?p[0]+' '+p[1].split('/')[0].trim():p[0]),
+    datasets:[
+      {label:'Meditators',data:top15.map(p=>p[2]),backgroundColor:'#f28c28',borderRadius:4},
+      {label:'Potential',data:top15.map(p=>p[3]),backgroundColor:'#5b8def',borderRadius:4}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#e8eaf0'}}},
+    scales:{x:{stacked:true,grid:{color:'#2a2f3e'},ticks:{color:'#9aa1b5'}},
+            y:{stacked:true,grid:{display:false},ticks:{color:'#e8eaf0',font:{size:11.5}}}}}});
+
+// city chart
+const palette=['#f28c28','#5b8def','#4cc38a','#e05e3d','#f2c94c','#9b8cff','#46b5d1','#d16ba5','#8aa1b5','#6fcf97','#b06a4d','#7286d3'];
+new Chart(document.getElementById('cityChart'),{type:'doughnut',
+  data:{labels:c.cities.map(x=>x[0]),datasets:[{data:c.cities.map(x=>x[1]+x[2]),backgroundColor:palette,borderColor:'#181b24',borderWidth:2}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'right',labels:{color:'#e8eaf0',font:{size:11},boxWidth:12}}}}});
+
+// table
+let rows=c.pins.map(p=>({zip:p[0],area:p[1],med:p[2],pot:p[3],total:p[2]+p[3],
+  conv:p[2]/((p[2]+p[3])||1)*100,opp:Math.round(oppScore(p))}));
+const maxOpp=Math.max(...rows.map(r=>r.opp),1);
+let sk='med',dir=-1,pq='';
+document.getElementById('pq').oninput=e=>{pq=e.target.value.toLowerCase();drawT();};
+document.querySelectorAll('#ptbl th').forEach(th=>th.onclick=()=>{
+  const k=th.dataset.k; if(sk===k)dir*=-1;else{sk=k;dir=k==='zip'||k==='area'?1:-1;}
+  document.querySelectorAll('#ptbl th').forEach(x=>x.classList.toggle('sorted',x===th));drawT();
+});
+function drawT(){
+  const r=rows.filter(x=>(x.zip+' '+x.area).toLowerCase().includes(pq))
+    .sort((a,b)=>{const va=a[sk],vb=b[sk];return (va<vb?-1:va>vb?1:0)*dir;});
+  document.querySelector('#ptbl tbody').innerHTML=r.map(x=>{
+    const pill=x.conv>=9?'hi':x.conv>=5?'md':'lo';
+    return `<tr>
+      <td><b>${x.zip}</b></td><td style="color:var(--muted)">${x.area||'—'}</td>
+      <td style="color:var(--accent);font-weight:600">${fmt(x.med)}</td><td>${fmt(x.pot)}</td>
+      <td>${fmt(x.total)}</td><td><span class="pill ${pill}">${x.conv.toFixed(1)}%</span></td>
+      <td>${fmt(x.opp)}<span class="mini"><i class="hot" style="width:${x.opp/maxOpp*100}%"></i></span></td></tr>`;
+  }).join('');
+}
+drawT();
+</script>
+</body>
+</html>
