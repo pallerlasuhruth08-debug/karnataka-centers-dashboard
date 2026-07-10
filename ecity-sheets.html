@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Electronic City — Center Planning Sheets (A3)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@page { size: A3 landscape; margin: 0; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:#1c2333;background:#666}
+.sheet{width:420mm;height:296mm;background:#fff;margin:8px auto;padding:9mm 11mm;overflow:hidden;position:relative;page-break-after:always;break-after:page}
+.no-print{position:fixed;top:10px;right:14px;z-index:9999}
+.no-print button{background:#f28c28;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:15px;font-weight:600;cursor:pointer}
+@media print{ body{background:#fff} .sheet{margin:0} .no-print{display:none} }
+.hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #f28c28;padding-bottom:4mm;margin-bottom:5mm}
+.hdr h1{font-size:26px} .hdr .tag{color:#6b7280;font-size:13px;text-align:right}
+.hdr .eyebrow{color:#e05e3d;font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+.cols{display:flex;gap:8mm;height:calc(100% - 30mm)}
+#map{flex:1;height:100%;border:1.5px solid #cbd2e0;border-radius:6px}
+.side{width:92mm;display:flex;flex-direction:column;gap:4mm}
+.legend,.arealist{border:1.5px solid #cbd2e0;border-radius:6px;padding:4mm;font-size:12.5px}
+.legend b,.arealist b{display:block;margin-bottom:2mm;font-size:13.5px}
+.sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px}
+.arealist table{width:100%;border-collapse:collapse;font-size:12px}
+.arealist td,.arealist th{padding:3px 4px;border-bottom:1px solid #e4e8f2;text-align:left}
+.arealist td.n{text-align:right;font-weight:600}
+.kpis{display:flex;gap:5mm;margin-bottom:4mm}
+.kpi{flex:1;border:1.5px solid #cbd2e0;border-left:4px solid #f28c28;border-radius:6px;padding:3mm 4mm}
+.kpi .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:#6b7280}
+.kpi .v{font-size:24px;font-weight:700} .kpi .s{font-size:11px;color:#6b7280}
+table.data{width:100%;border-collapse:collapse;font-size:13px}
+table.data th{background:#1c2333;color:#fff;padding:6px 7px;text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+table.data th:nth-child(1),table.data th:nth-child(2){text-align:left}
+table.data td{padding:5px 7px;border-bottom:1px solid #dfe4ee;text-align:right}
+table.data td.pin{font-weight:700;text-align:left} table.data td.area{text-align:left;color:#444}
+table.data td.strong{color:#c96a10;font-weight:700} table.data td.pot{color:#3a63c9}
+table.data td.up{color:#178a53;font-weight:600} table.data td.dn{color:#c0392b;font-weight:600}
+table.data tr.total td{border-top:2.5px solid #1c2333;font-weight:700;background:#f6f7fb}
+.charts{display:flex;gap:8mm;margin-top:5mm;height:66mm}
+.chartbox{flex:1.5;border:1.5px solid #cbd2e0;border-radius:6px;padding:3mm}
+.chartbox h3{font-size:13px;margin-bottom:1mm} .chartbox .note{font-size:10.5px;color:#6b7280}
+.chartbox canvas{max-height:52mm}
+.ws-note{background:#fdf3e7;border:1.5px solid #f28c28;border-radius:6px;padding:3mm 4mm;font-size:12.5px;margin-bottom:4mm}
+table.work{width:100%;border-collapse:collapse;table-layout:fixed}
+table.work th{background:#1c2333;color:#fff;padding:6px;font-size:11.5px;text-transform:uppercase}
+table.work td{border:1.2px solid #97a0b5;height:11.5mm;padding:2px 5px;font-size:11px;color:#8b93a8;vertical-align:top}
+table.work td.guide{color:#454d63;font-size:10.5px}
+.buckets{display:flex;gap:4mm;margin:3mm 0 4mm}
+.bucket{flex:1;border:1.5px solid #cbd2e0;border-radius:6px;padding:2.5mm 3mm;font-size:11px}
+.bucket b{font-size:12px;display:block}
+.two-col{display:flex;gap:8mm}
+.foot{position:absolute;bottom:5mm;left:11mm;right:11mm;display:flex;justify-content:space-between;font-size:10.5px;color:#8a90a3;border-top:1px solid #dfe4ee;padding-top:2mm}
+</style>
+</head>
+<body>
+<div class="no-print"><button onclick="window.print()">Print all 3 sheets (A3 landscape)</button></div>
+
+<!-- ============ SHEET 1 : MAP ============ -->
+<section class="sheet">
+  <div class="hdr">
+    <div><div class="eyebrow">KA Regional Meet - Center Mapping Exercise - Sheet 1 of 3</div>
+    <h1>Electronic City — Catchment Map</h1></div>
+    <div class="tag">Meditators <b style="color:#c96a10">6,152</b> · Potential <b style="color:#3a63c9">57,502</b><br>Data: Ishangam · 2026-07-10</div>
+  </div>
+  <div class="cols">
+    <div id="map"></div>
+    <div class="side">
+      <div class="legend"><b>Meditator strength (shading)</b>
+        <div><span class="sw" style="background:#7a2e04"></span>2,000+ meditators</div>
+        <div><span class="sw" style="background:#e0661a"></span>500 – 1,999</div>
+        <div><span class="sw" style="background:#f5a55f"></span>100 – 499</div>
+        <div><span class="sw" style="background:#fbd9b8"></span>&lt; 100</div>
+        <div style="margin-top:2mm"><span class="sw" style="background:#fff;border:2px dashed #3a63c9"></span>No boundary on record — approximate location shown</div>
+      </div>
+      <div class="arealist" style="flex:1;overflow:hidden"><b>Pincodes & localities in this catchment</b>
+        <table>
+          <tr><th>Pincode</th><th>Locality</th><th style="text-align:right">Med</th><th style="text-align:right">Pot</th></tr>
+          <tr><td><b>560068</b></td><td>Bommanahalli / Singasandra</td><td class='n'>2,570</td><td class='n' style='color:#3a63c9'>23,521</td></tr><tr><td><b>560100</b></td><td>Electronic City</td><td class='n'>2,365</td><td class='n' style='color:#3a63c9'>20,515</td></tr><tr><td><b>560099</b></td><td>Bommasandra / Hebbagodi</td><td class='n'>641</td><td class='n' style='color:#3a63c9'>6,955</td></tr><tr><td><b>562106</b></td><td>Attibele</td><td class='n'>213</td><td class='n' style='color:#3a63c9'>3,190</td></tr><tr><td><b>562107</b></td><td>Sarjapura</td><td class='n'>199</td><td class='n' style='color:#3a63c9'>2,786</td></tr><tr><td><b>560114</b></td><td>Begur</td><td class='n'>55</td><td class='n' style='color:#3a63c9'>196</td></tr><tr><td><b>560081</b></td><td>Chandapura</td><td class='n'>47</td><td class='n' style='color:#3a63c9'>320</td></tr><tr><td><b>OTH</b></td><td>Other / scattered</td><td class='n'>62</td><td class='n' style='color:#3a63c9'>19</td></tr>
+        </table>
+        <div style="margin-top:2mm;font-size:11px;color:#6b7280">Exercise: mark on the map where your meditators cluster, where sathsangs happen today, and circle the sub-areas you will discuss in Sheet 3.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Boundaries: India Post pincode polygons (center boundary map) · 562106 Attibele & 562107 Sarjapura shown as markers (no polygon on record)</span><span>Isha Karnataka · Electronic City</span></div>
+</section>
+
+<!-- ============ SHEET 2 : DATA ============ -->
+<section class="sheet">
+  <div class="hdr">
+    <div><div class="eyebrow">KA Regional Meet - Center Mapping Exercise - Sheet 2 of 3</div>
+    <h1>Electronic City — Pincode Health Indicators</h1></div>
+    <div class="tag">Active = last transaction in window · as of 2026-07-10</div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><div class="l">Meditators</div><div class="v" style="color:#c96a10">6,152</div><div class="s">initiated, mapped to center</div></div>
+    <div class="kpi"><div class="l">Potential</div><div class="v" style="color:#3a63c9">57,502</div><div class="s">non-initiated contacts</div></div>
+    <div class="kpi"><div class="l">Conversion</div><div class="v">9.7%</div><div class="s">meditators ÷ all contacts</div></div>
+    <div class="kpi"><div class="l">Active (6 mo)</div><div class="v">2,577</div><div class="s">42% of meditators</div></div>
+    <div class="kpi"><div class="l">Active (12 mo)</div><div class="v">3,326</div><div class="s">54% of meditators</div></div>
+    <div class="kpi"><div class="l">New in 2026</div><div class="v">885</div><div class="s">IE target 2026: 4,578</div></div>
+  </div>
+  <table class="data">
+    <thead><tr>
+      <th>Pincode</th><th>Locality</th><th>Medit.</th><th>Potential</th><th>Conv%</th>
+      <th>Active 6m</th><th>Active 12m</th><th>Active%</th>
+      <th>New '24</th><th>New '25</th><th>New '26</th><th>3-yr trend</th><th>Initiations 2008 → 2026</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+<td class="pin">560068</td><td class="area">Bommanahalli / Singasandra</td>
+<td class="num strong">2,570</td><td class="num pot">23,521</td>
+<td class="num">9.9%</td>
+<td class="num">1,000</td><td class="num">1,265</td><td class="num">49%</td>
+<td class="num">244</td><td class="num">323</td><td class="num strong">322</td>
+<td class="num up">+127%</td>
+<td><svg width="210" height="34" viewBox="0 0 210 34"><rect x="0.0" y="31.4" width="9.5" height="2.6" fill="#b9c2d8"/><rect x="11.1" y="29.8" width="9.5" height="4.2" fill="#b9c2d8"/><rect x="22.1" y="30.4" width="9.5" height="3.6" fill="#b9c2d8"/><rect x="33.2" y="26.0" width="9.5" height="8.0" fill="#b9c2d8"/><rect x="44.2" y="30.7" width="9.5" height="3.3" fill="#b9c2d8"/><rect x="55.3" y="30.1" width="9.5" height="3.9" fill="#b9c2d8"/><rect x="66.3" y="28.1" width="9.5" height="5.9" fill="#b9c2d8"/><rect x="77.4" y="26.8" width="9.5" height="7.2" fill="#b9c2d8"/><rect x="88.4" y="22.1" width="9.5" height="11.9" fill="#b9c2d8"/><rect x="99.5" y="17.4" width="9.5" height="16.6" fill="#b9c2d8"/><rect x="110.5" y="12.8" width="9.5" height="21.2" fill="#b9c2d8"/><rect x="121.6" y="10.9" width="9.5" height="23.1" fill="#b9c2d8"/><rect x="132.6" y="32.4" width="9.5" height="1.6" fill="#b9c2d8"/><rect x="143.7" y="21.3" width="9.5" height="12.7" fill="#b9c2d8"/><rect x="154.7" y="25.5" width="9.5" height="8.5" fill="#b9c2d8"/><rect x="165.8" y="18.8" width="9.5" height="15.2" fill="#b9c2d8"/><rect x="176.8" y="11.3" width="9.5" height="22.7" fill="#f28c28"/><rect x="187.9" y="4.0" width="9.5" height="30.0" fill="#f28c28"/><rect x="198.9" y="4.1" width="9.5" height="29.9" fill="#f28c28"/></svg></td></tr><tr>
+<td class="pin">560100</td><td class="area">Electronic City</td>
+<td class="num strong">2,365</td><td class="num pot">20,515</td>
+<td class="num">10.3%</td>
+<td class="num">1,009</td><td class="num">1,308</td><td class="num">55%</td>
+<td class="num">263</td><td class="num">347</td><td class="num strong">354</td>
+<td class="num up">+144%</td>
+<td><svg width="210" height="34" viewBox="0 0 210 34"><rect x="0.0" y="32.1" width="9.5" height="1.9" fill="#b9c2d8"/><rect x="11.1" y="31.5" width="9.5" height="2.5" fill="#b9c2d8"/><rect x="22.1" y="31.7" width="9.5" height="2.3" fill="#b9c2d8"/><rect x="33.2" y="29.3" width="9.5" height="4.7" fill="#b9c2d8"/><rect x="44.2" y="30.5" width="9.5" height="3.5" fill="#b9c2d8"/><rect x="55.3" y="29.3" width="9.5" height="4.7" fill="#b9c2d8"/><rect x="66.3" y="28.5" width="9.5" height="5.5" fill="#b9c2d8"/><rect x="77.4" y="29.3" width="9.5" height="4.7" fill="#b9c2d8"/><rect x="88.4" y="25.1" width="9.5" height="8.9" fill="#b9c2d8"/><rect x="99.5" y="23.4" width="9.5" height="10.6" fill="#b9c2d8"/><rect x="110.5" y="16.8" width="9.5" height="17.2" fill="#b9c2d8"/><rect x="121.6" y="19.3" width="9.5" height="14.7" fill="#b9c2d8"/><rect x="132.6" y="33.6" width="9.5" height="0.4" fill="#b9c2d8"/><rect x="143.7" y="24.8" width="9.5" height="9.2" fill="#b9c2d8"/><rect x="154.7" y="25.7" width="9.5" height="8.3" fill="#b9c2d8"/><rect x="165.8" y="18.0" width="9.5" height="16.0" fill="#b9c2d8"/><rect x="176.8" y="11.7" width="9.5" height="22.3" fill="#f28c28"/><rect x="187.9" y="4.6" width="9.5" height="29.4" fill="#f28c28"/><rect x="198.9" y="4.0" width="9.5" height="30.0" fill="#f28c28"/></svg></td></tr><tr>
+<td class="pin">560099</td><td class="area">Bommasandra / Hebbagodi</td>
+<td class="num strong">641</td><td class="num pot">6,955</td>
+<td class="num">8.4%</td>
+<td class="num">282</td><td class="num">404</td><td class="num">63%</td>
+<td class="num">65</td><td class="num">135</td><td class="num strong">101</td>
+<td class="num up">+201%</td>
+<td><svg width="210" height="34" viewBox="0 0 210 34"><rect x="0.0" y="32.2" width="9.5" height="1.8" fill="#b9c2d8"/><rect x="11.1" y="33.1" width="9.5" height="0.9" fill="#b9c2d8"/><rect x="22.1" y="32.4" width="9.5" height="1.6" fill="#b9c2d8"/><rect x="33.2" y="30.7" width="9.5" height="3.3" fill="#b9c2d8"/><rect x="44.2" y="32.0" width="9.5" height="2.0" fill="#b9c2d8"/><rect x="55.3" y="31.1" width="9.5" height="2.9" fill="#b9c2d8"/><rect x="66.3" y="32.4" width="9.5" height="1.6" fill="#b9c2d8"/><rect x="77.4" y="31.1" width="9.5" height="2.9" fill="#b9c2d8"/><rect x="88.4" y="27.6" width="9.5" height="6.4" fill="#b9c2d8"/><rect x="99.5" y="27.8" width="9.5" height="6.2" fill="#b9c2d8"/><rect x="110.5" y="25.6" width="9.5" height="8.4" fill="#b9c2d8"/><rect x="121.6" y="21.1" width="9.5" height="12.9" fill="#b9c2d8"/><rect x="132.6" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="143.7" y="28.2" width="9.5" height="5.8" fill="#b9c2d8"/><rect x="154.7" y="29.1" width="9.5" height="4.9" fill="#b9c2d8"/><rect x="165.8" y="22.4" width="9.5" height="11.6" fill="#b9c2d8"/><rect x="176.8" y="19.6" width="9.5" height="14.4" fill="#f28c28"/><rect x="187.9" y="4.0" width="9.5" height="30.0" fill="#f28c28"/><rect x="198.9" y="11.6" width="9.5" height="22.4" fill="#f28c28"/></svg></td></tr><tr>
+<td class="pin">562106</td><td class="area">Attibele</td>
+<td class="num strong">213</td><td class="num pot">3,190</td>
+<td class="num">6.3%</td>
+<td class="num">123</td><td class="num">147</td><td class="num">69%</td>
+<td class="num">23</td><td class="num">35</td><td class="num strong">44</td>
+<td class="num up">+191%</td>
+<td><svg width="210" height="34" viewBox="0 0 210 34"><rect x="0.0" y="33.3" width="9.5" height="0.7" fill="#b9c2d8"/><rect x="11.1" y="33.3" width="9.5" height="0.7" fill="#b9c2d8"/><rect x="22.1" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="33.2" y="31.3" width="9.5" height="2.7" fill="#b9c2d8"/><rect x="44.2" y="31.3" width="9.5" height="2.7" fill="#b9c2d8"/><rect x="55.3" y="32.0" width="9.5" height="2.0" fill="#b9c2d8"/><rect x="66.3" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="77.4" y="31.3" width="9.5" height="2.7" fill="#b9c2d8"/><rect x="88.4" y="25.8" width="9.5" height="8.2" fill="#b9c2d8"/><rect x="99.5" y="28.5" width="9.5" height="5.5" fill="#b9c2d8"/><rect x="110.5" y="21.7" width="9.5" height="12.3" fill="#b9c2d8"/><rect x="121.6" y="24.5" width="9.5" height="9.5" fill="#b9c2d8"/><rect x="132.6" y="33.3" width="9.5" height="0.7" fill="#b9c2d8"/><rect x="143.7" y="26.5" width="9.5" height="7.5" fill="#b9c2d8"/><rect x="154.7" y="24.5" width="9.5" height="9.5" fill="#b9c2d8"/><rect x="165.8" y="27.2" width="9.5" height="6.8" fill="#b9c2d8"/><rect x="176.8" y="18.3" width="9.5" height="15.7" fill="#f28c28"/><rect x="187.9" y="10.1" width="9.5" height="23.9" fill="#f28c28"/><rect x="198.9" y="4.0" width="9.5" height="30.0" fill="#f28c28"/></svg></td></tr><tr>
+<td class="pin">562107</td><td class="area">Sarjapura</td>
+<td class="num strong">199</td><td class="num pot">2,786</td>
+<td class="num">6.7%</td>
+<td class="num">94</td><td class="num">117</td><td class="num">59%</td>
+<td class="num">31</td><td class="num">23</td><td class="num strong">37</td>
+<td class="num up">+107%</td>
+<td><svg width="210" height="34" viewBox="0 0 210 34"><rect x="0.0" y="33.2" width="9.5" height="0.8" fill="#b9c2d8"/><rect x="11.1" y="33.2" width="9.5" height="0.8" fill="#b9c2d8"/><rect x="22.1" y="30.8" width="9.5" height="3.2" fill="#b9c2d8"/><rect x="33.2" y="32.4" width="9.5" height="1.6" fill="#b9c2d8"/><rect x="44.2" y="32.4" width="9.5" height="1.6" fill="#b9c2d8"/><rect x="55.3" y="32.4" width="9.5" height="1.6" fill="#b9c2d8"/><rect x="66.3" y="30.8" width="9.5" height="3.2" fill="#b9c2d8"/><rect x="77.4" y="29.1" width="9.5" height="4.9" fill="#b9c2d8"/><rect x="88.4" y="29.9" width="9.5" height="4.1" fill="#b9c2d8"/><rect x="99.5" y="25.1" width="9.5" height="8.9" fill="#b9c2d8"/><rect x="110.5" y="26.7" width="9.5" height="7.3" fill="#b9c2d8"/><rect x="121.6" y="22.6" width="9.5" height="11.4" fill="#b9c2d8"/><rect x="132.6" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="143.7" y="20.2" width="9.5" height="13.8" fill="#b9c2d8"/><rect x="154.7" y="25.1" width="9.5" height="8.9" fill="#b9c2d8"/><rect x="165.8" y="21.0" width="9.5" height="13.0" fill="#b9c2d8"/><rect x="176.8" y="8.9" width="9.5" height="25.1" fill="#f28c28"/><rect x="187.9" y="15.4" width="9.5" height="18.6" fill="#f28c28"/><rect x="198.9" y="4.0" width="9.5" height="30.0" fill="#f28c28"/></svg></td></tr><tr>
+<td class="pin">560114</td><td class="area">Begur</td>
+<td class="num strong">55</td><td class="num pot">196</td>
+<td class="num">21.9%</td>
+<td class="num">37</td><td class="num">41</td><td class="num">75%</td>
+<td class="num">4</td><td class="num">9</td><td class="num strong">19</td>
+<td class="num up">+167%</td>
+<td><svg width="210" height="34" viewBox="0 0 210 34"><rect x="0.0" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="11.1" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="22.1" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="33.2" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="44.2" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="55.3" y="32.4" width="9.5" height="1.6" fill="#b9c2d8"/><rect x="66.3" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="77.4" y="32.4" width="9.5" height="1.6" fill="#b9c2d8"/><rect x="88.4" y="30.8" width="9.5" height="3.2" fill="#b9c2d8"/><rect x="99.5" y="32.4" width="9.5" height="1.6" fill="#b9c2d8"/><rect x="110.5" y="32.4" width="9.5" height="1.6" fill="#b9c2d8"/><rect x="121.6" y="27.7" width="9.5" height="6.3" fill="#b9c2d8"/><rect x="132.6" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="143.7" y="29.3" width="9.5" height="4.7" fill="#b9c2d8"/><rect x="154.7" y="24.5" width="9.5" height="9.5" fill="#b9c2d8"/><rect x="165.8" y="29.3" width="9.5" height="4.7" fill="#b9c2d8"/><rect x="176.8" y="27.7" width="9.5" height="6.3" fill="#f28c28"/><rect x="187.9" y="19.8" width="9.5" height="14.2" fill="#f28c28"/><rect x="198.9" y="4.0" width="9.5" height="30.0" fill="#f28c28"/></svg></td></tr><tr>
+<td class="pin">560081</td><td class="area">Chandapura</td>
+<td class="num strong">47</td><td class="num pot">320</td>
+<td class="num">12.8%</td>
+<td class="num">20</td><td class="num">29</td><td class="num">62%</td>
+<td class="num">10</td><td class="num">11</td><td class="num strong">8</td>
+<td class="num up">+625%</td>
+<td><svg width="210" height="34" viewBox="0 0 210 34"><rect x="0.0" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="11.1" y="31.3" width="9.5" height="2.7" fill="#b9c2d8"/><rect x="22.1" y="28.5" width="9.5" height="5.5" fill="#b9c2d8"/><rect x="33.2" y="25.8" width="9.5" height="8.2" fill="#b9c2d8"/><rect x="44.2" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="55.3" y="28.5" width="9.5" height="5.5" fill="#b9c2d8"/><rect x="66.3" y="28.5" width="9.5" height="5.5" fill="#b9c2d8"/><rect x="77.4" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="88.4" y="31.3" width="9.5" height="2.7" fill="#b9c2d8"/><rect x="99.5" y="28.5" width="9.5" height="5.5" fill="#b9c2d8"/><rect x="110.5" y="31.3" width="9.5" height="2.7" fill="#b9c2d8"/><rect x="121.6" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="132.6" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="143.7" y="31.3" width="9.5" height="2.7" fill="#b9c2d8"/><rect x="154.7" y="34.0" width="9.5" height="0.0" fill="#b9c2d8"/><rect x="165.8" y="25.8" width="9.5" height="8.2" fill="#b9c2d8"/><rect x="176.8" y="6.7" width="9.5" height="27.3" fill="#f28c28"/><rect x="187.9" y="4.0" width="9.5" height="30.0" fill="#f28c28"/><rect x="198.9" y="12.2" width="9.5" height="21.8" fill="#f28c28"/></svg></td></tr><tr>
+<td class="pin">OTH</td><td class="area">Other / scattered</td>
+<td class="num strong">62</td><td class="num pot">19</td>
+<td class="num">76.5%</td>
+<td class="num">12</td><td class="num">15</td><td class="num">24%</td>
+<td class="num">0</td><td class="num">0</td><td class="num strong">0</td>
+<td class="num up">+0%</td>
+<td></td></tr>
+      <tr class="total"><td>TOTAL</td><td></td><td>6,152</td><td>57,502</td><td>9.7%</td>
+      <td>2,577</td><td>3,326</td><td>54%</td>
+      <td>640</td><td>883</td><td>885</td><td></td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="charts">
+    <div class="chartbox" style="flex:2"><h3>New meditators per year — whole center</h3>
+      <div class="note">2020 dip = pandemic (in-person IE paused). ~132 older records have no usable initiation date and are excluded from the timeline.</div>
+      <canvas id="yearChart"></canvas></div>
+    <div class="chartbox"><h3>Meditators vs potential by pincode</h3>
+      <div class="note">Orange = meditators, blue = potential.</div>
+      <canvas id="shareChart"></canvas></div>
+  </div>
+  <div class="foot"><span>Trend column compares 2024–26 vs 2021–23 initiations · sparkline bars: grey = 2008–23, orange = last 3 years</span><span>Source: Ishangam (Santosha), extracted 2026-07-10</span></div>
+</section>
+
+<!-- ============ SHEET 3 : WORKING SHEET ============ -->
+<section class="sheet">
+  <div class="hdr">
+    <div><div class="eyebrow">KA Regional Meet - Center Mapping Exercise - Sheet 3 of 3</div>
+    <h1>Electronic City — Area Growth Working Sheet</h1></div>
+    <div class="tag">Fill by hand as a team · refer to Sheets 1 & 2</div>
+  </div>
+  <div class="ws-note"><b>How to use:</b> Looking at the map and the pincode indicators, list the areas / sub-areas in your catchment. For each, mark where it stands <b>today</b>, and what you commit it becomes in <b>1 year</b> and in <b>5 years</b>. An area may be in no bucket today — that's a <b>Potential Area (PA)</b>.</div>
+  <div class="buckets">
+    <div class="bucket"><b>PA — Potential Area</b>Meditators exist, no regular gathering yet</div>
+    <div class="bucket"><b>MC — Micro-center</b>Regular sathsang / sadhana support point run by local volunteers</div>
+    <div class="bucket"><b>SC — Sub-center</b>Dedicated space, weekly activities, hosts programs with center support</div>
+    <div class="bucket"><b>FC — Full-fledged Center</b>Daily activities, own volunteer base, runs its own program calendar</div>
+  </div>
+  <table class="work">
+    <colgroup><col style="width:4%"><col style="width:16%"><col style="width:8%"><col style="width:10%"><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:23%"><col style="width:12%"></colgroup>
+    <thead><tr><th>#</th><th>Area / Sub-area</th><th>Pincode</th><th>Meditator strength (approx)</th><th>Today<br>PA/MC/SC/FC</th><th>In 1 year</th><th>In 5 years</th><th>What has to happen (key actions)</th><th>Who owns it</th></tr></thead>
+    <tbody>
+      <tr><td class="guide">e.g.</td><td class="guide">Neeladri Nagar</td><td class="guide">560100</td><td class="guide">~180</td><td class="guide">PA</td><td class="guide">MC</td><td class="guide">SC</td><td class="guide">Weekly sathsang from Aug; identify 2 hosts</td><td class="guide">—</td></tr>
+      <tr><td class='guide'>1</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class='guide'>2</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class='guide'>3</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class='guide'>4</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class='guide'>5</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class='guide'>6</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class='guide'>7</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class='guide'>8</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class='guide'>9</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class='guide'>10</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+    </tbody>
+  </table>
+  <div class="two-col" style="margin-top:4mm">
+    <div style="flex:1">
+      <table class="work">
+        <thead><tr><th style="text-align:left">Consolidation — areas in each bucket</th><th>Today</th><th>In 1 year</th><th>In 5 years</th></tr></thead>
+        <tbody>
+          <tr><td class="guide">Potential Areas (PA)</td><td></td><td></td><td></td></tr>
+          <tr><td class="guide">Micro-centers (MC)</td><td></td><td></td><td></td></tr>
+          <tr><td class="guide">Sub-centers (SC)</td><td></td><td></td><td></td></tr>
+          <tr><td class="guide">Full-fledged Centers (FC)</td><td></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="flex:1">
+      <table class="work">
+        <thead><tr><th style="text-align:left" colspan="2">Next 90 days — top 3 commitments</th></tr></thead>
+        <tbody>
+          <tr><td class="guide" style="width:6%">1</td><td></td></tr>
+          <tr><td class="guide">2</td><td></td></tr>
+          <tr><td class="guide">3</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="foot"><span>Team members present: ______________________________________________</span><span>Date: __________</span></div>
+</section>
+
+<script>
+const POLYS = [{"pin": "560068", "office": "Bommanahalli S.O (Bengaluru)", "coords": [[12.916531, 77.607873], [12.916533, 77.610296], [12.916193, 77.615777], [12.916118, 77.616987], [12.914807, 77.616885], [12.91408, 77.617569], [12.914067, 77.617581], [12.912734, 77.618974], [12.912362, 77.621266], [12.911016, 77.621084], [12.909892, 77.620508], [12.907792, 77.620735], [12.90655, 77.619612], [12.906017, 77.619005], [12.905337, 77.618702], [12.903207, 77.618307], [12.897957, 77.61805], [12.898083, 77.61896], [12.898208, 77.61987], [12.897676, 77.621281], [12.897713, 77.621486], [12.899488, 77.622161], [12.899874, 77.62438], [12.900102, 77.625689], [12.899894, 77.627298], [12.899683, 77.628248], [12.899654, 77.628381], [12.899372, 77.629652], [12.897802, 77.630289], [12.897573, 77.630382], [12.896409, 77.632059], [12.896404, 77.632066], [12.896401, 77.632069], [12.895677, 77.633112], [12.895084, 77.633965], [12.893661, 77.633214], [12.893089, 77.632662], [12.891389, 77.631022], [12.884531, 77.631593], [12.882797, 77.634072], [12.883766, 77.634352], [12.884586, 77.635233], [12.886295, 77.635323], [12.887715, 77.635013], [12.886021, 77.637198], [12.88577, 77.638253], [12.885854, 77.638498], [12.886074, 77.638621], [12.886079, 77.638922], [12.885723, 77.63919], [12.885692, 77.639785], [12.885827, 77.640847], [12.885891, 77.641872], [12.884667, 77.642516], [12.883757, 77.643149], [12.882184, 77.644173], [12.877137, 77.64744], [12.874783, 77.64949], [12.872879, 77.651346], [12.874418, 77.651809], [12.875442, 77.653124], [12.878779, 77.652665], [12.880034, 77.654994], [12.88344, 77.655784], [12.882471, 77.663067], [12.883684, 77.666671], [12.883396, 77.670428], [12.884387, 77.670192], [12.885304, 77.667892], [12.890137, 77.668887], [12.891999, 77.666763], [12.893165, 77.663287], [12.894341, 77.663363], [12.894728, 77.661205], [12.89455, 77.659167], [12.894292, 77.657822], [12.893823, 77.65646], [12.894045, 77.655443], [12.894489, 77.654298], [12.894644, 77.653114], [12.894319, 77.651976], [12.893675, 77.650975], [12.893357, 77.650448], [12.894603, 77.650321], [12.894906, 77.648631], [12.895115, 77.647934], [12.895784, 77.647463], [12.899711, 77.647269], [12.900815, 77.646404], [12.90252, 77.644587], [12.903565, 77.644131], [12.904261, 77.642736], [12.905155, 77.642666], [12.905664, 77.640654], [12.905929, 77.639128], [12.906105, 77.638529], [12.907244, 77.638707], [12.908371, 77.639013], [12.907916, 77.638734], [12.907939, 77.638552], [12.907565, 77.638096], [12.90766, 77.637393], [12.907652, 77.636806], [12.907053, 77.63661], [12.907354, 77.635671], [12.90723, 77.634266], [12.906807, 77.632721], [12.906786, 77.632275], [12.907163, 77.632254], [12.908941, 77.631992], [12.909056, 77.630675], [12.909803, 77.630484], [12.909921, 77.630513], [12.910023, 77.630623], [12.910166, 77.630675], [12.910386, 77.630755], [12.910635, 77.630763], [12.911079, 77.630647], [12.911434, 77.630256], [12.911682, 77.630182], [12.911787, 77.629786], [12.912098, 77.629577], [12.91268, 77.629207], [12.912747, 77.628065], [12.913432, 77.628301], [12.913514, 77.628014], [12.913887, 77.628134], [12.913913, 77.627745], [12.913529, 77.627445], [12.913617, 77.627275], [12.913743, 77.626874], [12.913984, 77.626346], [12.914027, 77.62563], [12.914596, 77.625782], [12.914779, 77.625685], [12.915096, 77.625166], [12.916402, 77.624213], [12.916457, 77.623703], [12.917304, 77.622764], [12.919431, 77.62166], [12.920178, 77.621604], [12.920633, 77.6216], [12.920921, 77.622465], [12.921472, 77.622939], [12.92257, 77.62297], [12.922204, 77.621856], [12.924067, 77.620739], [12.924308, 77.620828], [12.924648, 77.620399], [12.925149, 77.619814], [12.924585, 77.618429], [12.926232, 77.617426], [12.927623, 77.616096], [12.927572, 77.61204], [12.926027, 77.611767], [12.925842, 77.612246], [12.925372, 77.612606], [12.925147, 77.612599], [12.92508, 77.612398], [12.924175, 77.61239], [12.924079, 77.612857], [12.923982, 77.613141], [12.923805, 77.613517], [12.923435, 77.614042], [12.923482, 77.614401], [12.92344, 77.614643], [12.922096, 77.614052], [12.920888, 77.613468], [12.918111, 77.612724], [12.918396, 77.610803], [12.917154, 77.610516], [12.917279, 77.610118], [12.91881, 77.609538], [12.918984, 77.608217], [12.917514, 77.607836], [12.917158, 77.607744], [12.917156, 77.607743], [12.916901, 77.607551], [12.91653, 77.607273], [12.916531, 77.607873]]}, {"pin": "560081", "office": "Chandapura S.O", "coords": [[12.80056, 77.698549], [12.79998, 77.697973], [12.799318, 77.697741], [12.799122, 77.697324], [12.798951, 77.697036], [12.798741, 77.696983], [12.797756, 77.697024], [12.797196, 77.696466], [12.796762, 77.695865], [12.795449, 77.695693], [12.794303, 77.694368], [12.792275, 77.692912], [12.791379, 77.690055], [12.790055, 77.689923], [12.788408, 77.692587], [12.785897, 77.693446], [12.779395, 77.694624], [12.778617, 77.696721], [12.778573, 77.698936], [12.779047, 77.702387], [12.788842, 77.71203], [12.797542, 77.717493], [12.799517, 77.716651], [12.805828, 77.71581], [12.80897, 77.71078], [12.813995, 77.711241], [12.822043, 77.712093], [12.824504, 77.709128], [12.826156, 77.707137], [12.82768, 77.70716], [12.828353, 77.706849], [12.828515, 77.705912], [12.827279, 77.705696], [12.826167, 77.705502], [12.823613, 77.705848], [12.821321, 77.706159], [12.815393, 77.70454], [12.815222, 77.703595], [12.81393, 77.703258], [12.81213, 77.703761], [12.811568, 77.704019], [12.811163, 77.70455], [12.811038, 77.705591], [12.810117, 77.706213], [12.80973, 77.707586], [12.80793, 77.706631], [12.807209, 77.705677], [12.806518, 77.704797], [12.806005, 77.703627], [12.804823, 77.703724], [12.805043, 77.701514], [12.804762, 77.700378], [12.803686, 77.700116], [12.803227, 77.699907], [12.802674, 77.699653], [12.802014, 77.699122], [12.80177, 77.698868], [12.801063, 77.699065], [12.80056, 77.698549]]}, {"pin": "560099", "office": "Bommasandra Industrial Estate S.O", "coords": [[12.893452, 77.673767], [12.892778, 77.673663], [12.892193, 77.673572], [12.888516, 77.673002], [12.884568, 77.67239], [12.884019, 77.676103], [12.88018, 77.673371], [12.876201, 77.673581], [12.876392, 77.674705], [12.872781, 77.675244], [12.869763, 77.676184], [12.868267, 77.67862], [12.866113, 77.681183], [12.862933, 77.682631], [12.862755, 77.68394], [12.860747, 77.686311], [12.858055, 77.685323], [12.85538, 77.684474], [12.849963, 77.683062], [12.846778, 77.682231], [12.846556, 77.683005], [12.845602, 77.682815], [12.845358, 77.684302], [12.846053, 77.684567], [12.845621, 77.685326], [12.845619, 77.685329], [12.843728, 77.688103], [12.84239, 77.687135], [12.84149, 77.690763], [12.842138, 77.692931], [12.840046, 77.695871], [12.838938, 77.699261], [12.839, 77.703145], [12.832264, 77.703444], [12.831531, 77.706749], [12.83036, 77.709432], [12.827765, 77.711531], [12.828434, 77.70769], [12.829618, 77.706295], [12.827703, 77.695507], [12.826552, 77.693575], [12.825589, 77.691312], [12.827561, 77.688205], [12.827242, 77.684911], [12.827358, 77.683439], [12.827358, 77.683438], [12.82753, 77.682888], [12.827724, 77.682268], [12.829627, 77.681225], [12.829533, 77.678372], [12.831008, 77.67526], [12.828046, 77.668544], [12.826866, 77.665869], [12.822807, 77.667664], [12.819114, 77.668339], [12.817702, 77.668597], [12.815515, 77.668081], [12.816802, 77.664832], [12.817346, 77.662192], [12.814521, 77.661946], [12.814793, 77.659918], [12.814323, 77.658304], [12.810379, 77.659456], [12.805503, 77.660205], [12.800105, 77.657986], [12.799069, 77.661012], [12.807078, 77.663584], [12.807515, 77.663681], [12.808012, 77.663861], [12.809003, 77.664175], [12.81086, 77.665299], [12.810624, 77.665919], [12.810477, 77.666101], [12.810321, 77.666296], [12.810012, 77.666865], [12.810593, 77.667444], [12.811718, 77.668571], [12.811195, 77.669105], [12.812092, 77.669329], [12.81222, 77.669327], [12.813262, 77.669622], [12.812933, 77.670536], [12.815304, 77.671579], [12.812052, 77.673168], [12.81025, 77.674226], [12.810377, 77.67535], [12.808526, 77.675238], [12.808401, 77.676881], [12.805541, 77.676259], [12.802573, 77.675613], [12.802883, 77.679469], [12.802358, 77.681457], [12.800013, 77.683339], [12.800265, 77.684476], [12.80002, 77.685038], [12.798548, 77.685355], [12.799983, 77.687981], [12.800797, 77.689552], [12.800919, 77.690018], [12.800953, 77.690454], [12.800991, 77.690857], [12.801109, 77.691654], [12.801315, 77.69251], [12.8014, 77.69361], [12.800262, 77.695784], [12.801099, 77.696246], [12.80056, 77.698549], [12.801063, 77.699065], [12.80177, 77.698868], [12.802014, 77.699122], [12.802674, 77.699653], [12.803227, 77.699907], [12.803686, 77.700116], [12.804762, 77.700378], [12.805043, 77.701514], [12.804823, 77.703724], [12.806005, 77.703627], [12.806518, 77.704797], [12.807209, 77.705677], [12.80793, 77.706631], [12.80973, 77.707586], [12.810117, 77.706213], [12.811038, 77.705591], [12.811163, 77.70455], [12.811568, 77.704019], [12.81213, 77.703761], [12.81393, 77.703258], [12.815222, 77.703595], [12.815393, 77.70454], [12.821321, 77.706159], [12.823613, 77.705848], [12.826167, 77.705502], [12.827279, 77.705696], [12.828515, 77.705912], [12.828353, 77.706849], [12.82768, 77.70716], [12.826156, 77.707137], [12.824504, 77.709128], [12.822043, 77.712093], [12.813995, 77.711241], [12.813344, 77.735882], [12.813817, 77.745592], [12.811923, 77.751418], [12.810976, 77.754454], [12.812042, 77.756703], [12.819498, 77.759663], [12.820924, 77.757035], [12.831866, 77.736853], [12.852399, 77.738674], [12.868434, 77.724169], [12.873211, 77.732175], [12.876572, 77.723252], [12.877241, 77.718916], [12.877132, 77.715067], [12.878413, 77.708402], [12.878167, 77.705415], [12.877911, 77.703681], [12.878601, 77.700956], [12.87864, 77.698466], [12.879099, 77.694809], [12.880083, 77.691834], [12.879624, 77.691297], [12.878544, 77.691008], [12.87864, 77.689255], [12.879728, 77.689392], [12.879809, 77.688338], [12.881924, 77.68868], [12.881592, 77.687503], [12.884166, 77.687669], [12.88515, 77.687732], [12.885156, 77.687733], [12.886863, 77.687843], [12.888427, 77.688199], [12.888428, 77.688199], [12.891671, 77.688937], [12.893106, 77.685683], [12.894851, 77.684537], [12.893372, 77.683657], [12.892174, 77.68135], [12.892595, 77.680163], [12.893149, 77.678436], [12.893923, 77.678489], [12.89431, 77.677856], [12.894132, 77.677428], [12.893452, 77.673767]]}, {"pin": "560100", "office": "Electronics City S.O", "coords": [[12.872879, 77.651346], [12.870431, 77.652661], [12.870431, 77.648608], [12.869647, 77.649078], [12.868316, 77.649245], [12.868286, 77.64841], [12.867576, 77.648183], [12.867532, 77.647621], [12.867029, 77.647242], [12.867502, 77.644526], [12.868301, 77.645725], [12.869085, 77.646257], [12.86947, 77.644571], [12.869729, 77.643441], [12.869588, 77.642386], [12.867251, 77.643241], [12.862138, 77.639353], [12.866689, 77.631382], [12.865801, 77.629338], [12.861139, 77.632259], [12.859855, 77.633162], [12.85935, 77.634662], [12.859322, 77.634746], [12.859293, 77.634831], [12.859288, 77.634865], [12.859236, 77.635024], [12.85922, 77.635071], [12.858969, 77.63514], [12.85905, 77.635582], [12.858805, 77.636318], [12.857426, 77.634813], [12.849471, 77.641814], [12.849855, 77.636744], [12.851334, 77.633253], [12.852666, 77.629581], [12.854126, 77.625082], [12.849795, 77.62639], [12.845695, 77.627506], [12.840046, 77.627506], [12.839976, 77.627621], [12.843642, 77.630036], [12.84447, 77.636348], [12.841761, 77.640345], [12.840003, 77.64294], [12.83827, 77.647652], [12.836573, 77.652265], [12.8331, 77.653939], [12.832577, 77.659457], [12.830213, 77.66422], [12.82515, 77.66244], [12.823351, 77.660594], [12.823049, 77.658197], [12.823049, 77.657636], [12.822117, 77.657757], [12.819779, 77.657287], [12.814323, 77.658304], [12.814793, 77.659918], [12.814521, 77.661946], [12.817346, 77.662192], [12.816802, 77.664832], [12.815515, 77.668081], [12.817702, 77.668597], [12.819114, 77.668339], [12.822807, 77.667664], [12.826866, 77.665869], [12.828046, 77.668544], [12.831008, 77.67526], [12.829533, 77.678372], [12.829627, 77.681225], [12.827724, 77.682268], [12.82753, 77.682888], [12.827358, 77.683438], [12.827358, 77.683439], [12.827242, 77.684911], [12.827561, 77.688205], [12.825589, 77.691312], [12.826552, 77.693575], [12.827703, 77.695507], [12.829618, 77.706295], [12.828434, 77.70769], [12.827765, 77.711531], [12.83036, 77.709432], [12.831531, 77.706749], [12.832264, 77.703444], [12.839, 77.703145], [12.838938, 77.699261], [12.840046, 77.695871], [12.842138, 77.692931], [12.84149, 77.690763], [12.84239, 77.687135], [12.843728, 77.688103], [12.845619, 77.685329], [12.845621, 77.685326], [12.846053, 77.684567], [12.845358, 77.684302], [12.845602, 77.682815], [12.846556, 77.683005], [12.846778, 77.682231], [12.849963, 77.683062], [12.85538, 77.684474], [12.858055, 77.685323], [12.860747, 77.686311], [12.862755, 77.68394], [12.862933, 77.682631], [12.866113, 77.681183], [12.868267, 77.67862], [12.869763, 77.676184], [12.872781, 77.675244], [12.876392, 77.674705], [12.876201, 77.673581], [12.88018, 77.673371], [12.884019, 77.676103], [12.884568, 77.67239], [12.888516, 77.673002], [12.888936, 77.671994], [12.889012, 77.671797], [12.889312, 77.671019], [12.890137, 77.668887], [12.885304, 77.667892], [12.884387, 77.670192], [12.883396, 77.670428], [12.883684, 77.666671], [12.882471, 77.663067], [12.88344, 77.655784], [12.880034, 77.654994], [12.878779, 77.652665], [12.875442, 77.653124], [12.874418, 77.651809], [12.872879, 77.651346]]}, {"pin": "560114", "office": "Begur", "coords": [[12.897957, 77.61805], [12.896064, 77.617776], [12.893357, 77.616957], [12.893239, 77.616107], [12.888891, 77.615865], [12.884069, 77.615409], [12.883091, 77.615144], [12.88309, 77.615144], [12.881717, 77.614772], [12.880626, 77.613347], [12.879395, 77.611738], [12.878714, 77.610289], [12.876984, 77.610182], [12.876488, 77.609409], [12.875709, 77.60945], [12.875155, 77.609337], [12.874687, 77.608965], [12.872906, 77.607561], [12.872116, 77.609568], [12.864711, 77.608858], [12.858174, 77.611338], [12.856825, 77.609888], [12.853739, 77.609224], [12.852089, 77.616085], [12.853154, 77.618217], [12.856512, 77.618124], [12.855925, 77.620552], [12.854638, 77.620691], [12.854126, 77.625082], [12.852666, 77.629581], [12.851334, 77.633253], [12.849855, 77.636744], [12.849471, 77.641814], [12.857426, 77.634813], [12.858805, 77.636318], [12.85905, 77.635582], [12.858969, 77.63514], [12.85922, 77.635071], [12.859236, 77.635024], [12.859288, 77.634865], [12.859293, 77.634831], [12.859322, 77.634746], [12.85935, 77.634662], [12.859855, 77.633162], [12.861139, 77.632259], [12.865801, 77.629338], [12.866689, 77.631382], [12.862138, 77.639353], [12.867251, 77.643241], [12.869588, 77.642386], [12.869729, 77.643441], [12.86947, 77.644571], [12.869085, 77.646257], [12.868301, 77.645725], [12.867502, 77.644526], [12.867029, 77.647242], [12.867532, 77.647621], [12.867576, 77.648183], [12.868286, 77.64841], [12.868316, 77.649245], [12.869647, 77.649078], [12.870431, 77.648608], [12.870431, 77.652661], [12.872879, 77.651346], [12.874783, 77.64949], [12.877137, 77.64744], [12.882184, 77.644173], [12.883757, 77.643149], [12.884667, 77.642516], [12.885891, 77.641872], [12.885827, 77.640847], [12.885692, 77.639785], [12.885723, 77.63919], [12.886079, 77.638922], [12.886074, 77.638621], [12.885854, 77.638498], [12.88577, 77.638253], [12.886021, 77.637198], [12.887715, 77.635013], [12.886295, 77.635323], [12.884586, 77.635233], [12.883766, 77.634352], [12.882797, 77.634072], [12.884531, 77.631593], [12.891389, 77.631022], [12.893089, 77.632662], [12.893661, 77.633214], [12.895084, 77.633965], [12.895677, 77.633112], [12.896401, 77.632069], [12.896404, 77.632066], [12.896409, 77.632059], [12.897573, 77.630382], [12.897802, 77.630289], [12.899372, 77.629652], [12.899654, 77.628381], [12.899683, 77.628248], [12.899894, 77.627298], [12.900102, 77.625689], [12.899874, 77.62438], [12.899488, 77.622161], [12.897713, 77.621486], [12.897676, 77.621281], [12.898208, 77.61987], [12.898083, 77.61896], [12.897957, 77.61805]]}];
+const PIN = {"560068": {"med": 2570, "pot": 23521, "area": "Bommanahalli / Singasandra"}, "560100": {"med": 2365, "pot": 20515, "area": "Electronic City"}, "560099": {"med": 641, "pot": 6955, "area": "Bommasandra / Hebbagodi"}, "562106": {"med": 213, "pot": 3190, "area": "Attibele"}, "562107": {"med": 199, "pot": 2786, "area": "Sarjapura"}, "560081": {"med": 47, "pot": 320, "area": "Chandapura"}, "560114": {"med": 55, "pot": 196, "area": "Begur"}, "OTH": {"med": 62, "pot": 19, "area": "Other / scattered"}};
+function shade(m){ return m>=2000?'#7a2e04':m>=500?'#e0661a':m>=100?'#f5a55f':'#fbd9b8'; }
+const map = L.map('map',{zoomSnap:0.25});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+const fg = L.featureGroup();
+POLYS.forEach(p=>{
+  const d = PIN[p.pin]||{med:0,pot:0,area:''};
+  const poly = L.polygon(p.coords,{color:'#5a3212',weight:1.6,fillColor:shade(d.med),fillOpacity:0.55}).addTo(fg);
+  poly.bindTooltip(`<div style="text-align:center;font-size:12px;line-height:1.25"><b>${p.pin}</b><br>${d.area}<br><span style="color:#c96a10;font-weight:700">${d.med.toLocaleString('en-IN')} med</span> · <span style="color:#3a63c9">${d.pot.toLocaleString('en-IN')} pot</span></div>`,{permanent:true,direction:'center',className:'plabel'});
+});
+[['562106',12.7786,77.7710],['562107',12.8598,77.7867]].forEach(([pin,lat,lng])=>{
+  const d=PIN[pin];
+  L.circleMarker([lat,lng],{radius:16,color:'#3a63c9',dashArray:'4 3',weight:2.5,fillColor:'#dbe6ff',fillOpacity:.85}).addTo(fg)
+   .bindTooltip(`<div style="text-align:center;font-size:12px;line-height:1.25"><b>${pin}</b><br>${d.area}<br><span style="color:#c96a10;font-weight:700">${d.med.toLocaleString('en-IN')} med</span> · <span style="color:#3a63c9">${d.pot.toLocaleString('en-IN')} pot</span></div>`,{permanent:true,direction:'bottom',className:'plabel'});
+});
+fg.addTo(map);
+map.fitBounds(fg.getBounds().pad(0.12));
+const st=document.createElement('style');st.textContent='.plabel{background:rgba(255,255,255,.92);border:1px solid #97a0b5;border-radius:5px;box-shadow:none;padding:3px 6px} .plabel:before{display:none}';document.head.appendChild(st);
+
+new Chart(document.getElementById('yearChart'),{type:'bar',
+ data:{labels:["2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025", "2026"],datasets:[{data:[61, 81, 79, 165, 91, 119, 142, 157, 282, 354, 498, 513, 23, 303, 242, 437, 640, 883, 885],backgroundColor:["2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025", "2026"].map(y=>+y>=2024?'#f28c28':'#8fa0c4'),borderRadius:3}]},
+ options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},
+   scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#e4e8f2'}}}}});
+const shr = [["560068", 2570, 23521], ["560100", 2365, 20515], ["560099", 641, 6955], ["562106", 213, 3190], ["562107", 199, 2786], ["560114", 55, 196], ["560081", 47, 320]];
+new Chart(document.getElementById('shareChart'),{type:'bar',
+ data:{labels:shr.map(x=>x[0]),datasets:[
+   {label:'Meditators',data:shr.map(x=>x[1]),backgroundColor:'#f28c28'},
+   {label:'Potential',data:shr.map(x=>x[2]),backgroundColor:'#5b8def'}]},
+ options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:false,
+   plugins:{legend:{labels:{boxWidth:12,font:{size:10}}}},
+   scales:{x:{stacked:true,grid:{color:'#e4e8f2'},ticks:{font:{size:9}}},y:{stacked:true,grid:{display:false},ticks:{font:{size:10}}}}}});
+setTimeout(()=>map.invalidateSize(),400);
+window.addEventListener('beforeprint',()=>map.invalidateSize());
+</script>
+</body>
+</html>
