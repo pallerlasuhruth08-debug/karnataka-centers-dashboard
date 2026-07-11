@@ -8,7 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 @page { size: A3 landscape; margin: 0; }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}
+*{box-sizing:border-box;margin:0;padding:0}
 body{font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:#1c2333;background:#666}
 .sheet{width:420mm;height:296mm;background:#fff;margin:8px auto;padding:9mm 11mm;overflow:hidden;position:relative;page-break-after:always;break-after:page}
 .no-print{position:fixed;top:10px;right:14px;z-index:9999;display:flex;gap:8px}
@@ -19,7 +19,7 @@ body{font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:#1c2333;background:#66
 .hdr h1{font-size:26px} .hdr .tag{color:#6b7280;font-size:13px;text-align:right}
 .hdr .eyebrow{color:#e05e3d;font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
 .cols{display:flex;gap:8mm;height:calc(100% - 30mm)}
-.map{flex:1;height:100%;border:1.5px solid #cbd2e0;border-radius:6px}
+#map{flex:1;height:100%;border:1.5px solid #cbd2e0;border-radius:6px}
 .side{width:96mm;display:flex;flex-direction:column;gap:4mm}
 .legend,.arealist{border:1.5px solid #cbd2e0;border-radius:6px;padding:4mm;font-size:12.5px}
 .legend b,.arealist b{display:block;margin-bottom:2mm;font-size:13.5px}
@@ -65,40 +65,34 @@ table.work td.guide{color:#454d63;font-size:10.5px}
 <body>
 <div id="root"></div>
 <script src="blr-data.js"></script>
+<script src="nk-data.js"></script>
 <script>
 const D = window.BLR_SHEETS, YRS = D.years;
+D.centers = Object.assign({}, D.centers, (window.NK_SHEETS||{centers:{}}).centers);
 const fmt = n => n.toLocaleString('en-IN');
 const id = new URLSearchParams(location.search).get('id');
 const root = document.getElementById('root');
-const sortedIds = Object.entries(D.centers).sort((a,b)=>a[1].name.localeCompare(b[1].name)).map(([cid])=>cid);
 
-if(id === 'all'){
-  // ---------- ALL CENTERS, ONE DOCUMENT (one print action = full pack) ----------
-  document.title = 'All Bangalore Centers — Planning Sheets (A3)';
-  root.innerHTML = `<div class="no-print"><a class="sec" href="sheets.html">← All centers</a><button onclick="window.print()">Print ALL ${sortedIds.length} center packs (A3 landscape, ${sortedIds.length*3} pages)</button></div>`
-    + sortedIds.map(cid=>sheetsHTML(cid,false)).join('');
-  sortedIds.forEach(initCenter);
-} else if(!id || !D.centers[id]){
+if(!id || !D.centers[id]){
   // ---------- INDEX ----------
-  document.title = 'Bangalore Center Planning Sheets';
-  const items = sortedIds.map(cid=>{
-      const c=D.centers[cid];
+  document.title = 'Center Planning Sheets — Karnataka';
+  const items = Object.entries(D.centers).sort((a,b)=>a[1].name.localeCompare(b[1].name))
+    .map(([cid,c])=>{
       const tm=c.pins.reduce((a,p)=>a+p.med,0), tp=c.pins.reduce((a,p)=>a+p.pot,0);
-      return `<a class="c" href="sheets.html?id=${cid}">${c.name}<span>${fmt(tm)} meditators · ${fmt(tp)} potential · ${c.polys.length} boundary polygons</span></a>`;
+      const mapkind = c.polys.length? c.polys.length+' boundary polygons' : 'bubble map (approx. locations)';
+      return `<a class="c" href="sheets.html?id=${cid}">${c.name}<span>${fmt(tm)} meditators · ${fmt(tp)} potential · ${mapkind}</span></a>`;
     }).join('');
-  root.innerHTML = `<div class="idx"><h1>Bangalore Center Planning Sheets</h1>
+  root.innerHTML = `<div class="idx"><h1>Center Planning Sheets — Karnataka</h1>
     <p>Open a center, then use the Print button (A3 landscape, background graphics ON). Each pack = zoomed catchment map + pincode indicators + working sheet.</p>
-    <a class="c" href="sheets.html?id=all" style="border-color:#f28c28;background:#fdf3e7"><b>🖨 Print ALL centers — one PDF, ${sortedIds.length*3} pages</b><span>One print action for the whole set</span></a>
     ${items}
     <p style="margin-top:14px;font-size:12px">Data: Ishangam (Santosha) · ${D.asof} · Active = last transaction within 12 months</p></div>`;
 } else {
-  root.innerHTML = sheetsHTML(id,true);
-  initCenter(id);
+  buildCenter(id);
 }
 
-function sheetsHTML(cid,showControls){
+function buildCenter(cid){
   const c = D.centers[cid];
-  if(showControls) document.title = c.name + ' — Center Planning Sheets (A3)';
+  document.title = c.name + ' — Center Planning Sheets (A3)';
   const P = c.pins;
   const tot = k => P.reduce((a,p)=>a+p[k],0);
   const tm=tot('med'), tp=tot('pot'), tam=tot('am'), tap=tot('ap'), tb=tot('bsp');
@@ -137,8 +131,8 @@ function sheetsHTML(cid,showControls){
   const areaRows = P.map(p=>`<tr><td><b>${p.pin}</b></td><td>${p.area}</td><td class="n">${fmt(p.med)}</td><td class="n" style="color:#3a63c9">${fmt(p.pot)}</td></tr>`).join('');
   const noPoly = P.filter(p=>p.pin!=='OTH' && !c.polys.some(q=>q.pin===p.pin) && !(c.approx&&c.approx[p.pin])).map(p=>p.pin+' '+p.area);
 
-  return `
-  ${showControls?`<div class="no-print"><a class="sec" href="sheets.html">← All centers</a><button onclick="window.print()">Print ${c.name} pack (A3 landscape)</button></div>`:''}
+  root.innerHTML = `
+  <div class="no-print"><a class="sec" href="sheets.html">← All centers</a><button onclick="window.print()">Print ${c.name} pack (A3 landscape)</button></div>
 
   <section class="sheet">
     <div class="hdr">
@@ -147,18 +141,21 @@ function sheetsHTML(cid,showControls){
       <div class="tag">Meditators <b style="color:#c96a10">${fmt(tm)}</b> · Potential <b style="color:#3a63c9">${fmt(tp)}</b><br>Data: Ishangam · ${D.asof}</div>
     </div>
     <div class="cols">
-      <div class="map" id="map_${cid}"></div>
+      <div id="map"></div>
       <div class="side">
-        <div class="legend"><b>Meditator strength (shading)</b>
+        <div class="legend">${c.polys.length?`<b>Meditator strength (shading)</b>
           <div><span class="sw" style="background:#7a2e04"></span>2,000+ meditators</div>
           <div><span class="sw" style="background:#e0661a"></span>500 – 1,999</div>
           <div><span class="sw" style="background:#f5a55f"></span>100 – 499</div>
           <div><span class="sw" style="background:#fbd9b8"></span>&lt; 100</div>
-          <div style="margin-top:2mm"><span class="sw" style="background:#fff;border:2px dashed #3a63c9"></span>No boundary on record — approx. location</div>
+          <div style="margin-top:2mm"><span class="sw" style="background:#fff;border:2px dashed #3a63c9"></span>No boundary on record — approx. location</div>`
+          :`<b>Meditator strength (bubble size)</b>
+          <div><span class="sw" style="background:#f28c28;border-radius:50%"></span>Bubble area ∝ meditators in that pincode</div>
+          <div style="margin-top:2mm;color:#6b7280">Positions are the pincode's town/taluk — approximate, no official boundary available for this region.</div>`}
         </div>
         <div class="arealist" style="flex:1;overflow:hidden"><b>Pincodes & localities in this catchment</b>
           <table><tr><th>Pincode</th><th>Locality</th><th style="text-align:right">Med</th><th style="text-align:right">Pot</th></tr>${areaRows}</table>
-          ${noPoly.length?`<div style="margin-top:2mm;font-size:11px;color:#b23217">No map boundary available for: ${noPoly.join(', ')} — see table on Sheet 2.</div>`:''}
+          ${noPoly.length?`<div style="margin-top:2mm;font-size:11px;color:#b23217">Not plotted on map (${c.polys.length?'no boundary':'small / location not mapped'}): ${noPoly.slice(0,14).join(', ')}${noPoly.length>14?' +'+(noPoly.length-14)+' more':''} — all appear in the Sheet 2 table.</div>`:''}
           <div style="margin-top:2mm;font-size:11px;color:#6b7280">Exercise: mark where meditators cluster, where sathsangs happen today, and circle sub-areas for Sheet 3.</div>
         </div>
       </div>
@@ -205,10 +202,10 @@ function sheetsHTML(cid,showControls){
     <div class="charts">
       <div class="chartbox" style="flex:2"><h3>New meditators per year — whole center</h3>
         <div class="note">2020 dip = pandemic (in-person IE paused). Orange = last 3 years. Meditators with no recorded initiation date are not on this timeline.</div>
-        <canvas id="yearChart_${cid}"></canvas></div>
+        <canvas id="yearChart"></canvas></div>
       <div class="chartbox"><h3>Meditators vs potential by pincode</h3>
         <div class="note">Orange = meditators, blue = potential.</div>
-        <canvas id="shareChart_${cid}"></canvas></div>
+        <canvas id="shareChart"></canvas></div>
     </div>
     <div class="foot"><span>3-yr trend = new meditators added in 2021-23 vs 2024-26 · Active % uses each column's own base</span><span>Source: Ishangam (Santosha), extracted ${D.asof}</span></div>
   </section>
@@ -259,17 +256,11 @@ function sheetsHTML(cid,showControls){
     </div>
     <div class="foot"><span>Team members present: ______________________________________________</span><span>Date: __________</span></div>
   </section>`;
-}
-
-function initCenter(cid){
-  const c = D.centers[cid];
-  const P = c.pins;
-  const ctotY = YRS.map((y,i)=>P.reduce((a,p)=>a+p.years[i],0));
 
   // map
   const byPin = Object.fromEntries(P.map(p=>[p.pin,p]));
   const shade = m => m>=2000?'#7a2e04':m>=500?'#e0661a':m>=100?'#f5a55f':'#fbd9b8';
-  const map = L.map('map_'+cid,{zoomSnap:0.25});
+  const map = L.map('map',{zoomSnap:0.25});
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
   const fg = L.featureGroup();
   const tip = (pin,d)=>`<div style="text-align:center;font-size:12px;line-height:1.25"><b>${pin}</b><br>${d?d.area:''}<br><span style="color:#c96a10;font-weight:700">${d?fmt(d.med):0} med</span> · <span style="color:#3a63c9">${d?fmt(d.pot):0} pot</span></div>`;
@@ -278,23 +269,26 @@ function initCenter(cid){
     L.polygon(p.coords,{color:'#5a3212',weight:1.6,fillColor:shade(d?d.med:0),fillOpacity:0.55}).addTo(fg)
      .bindTooltip(tip(p.pin,d),{permanent:true,direction:'center',className:'plabel'});
   });
+  const bubbleMode = c.polys.length===0;
   Object.entries(c.approx||{}).forEach(([pin,ll])=>{
-    L.circleMarker(ll,{radius:16,color:'#3a63c9',dashArray:'4 3',weight:2.5,fillColor:'#dbe6ff',fillOpacity:.85}).addTo(fg)
-     .bindTooltip(tip(pin,byPin[pin]),{permanent:true,direction:'bottom',className:'plabel'});
+    const d=byPin[pin], m=d?d.med:0;
+    const style = bubbleMode
+      ? {radius:Math.max(9,Math.sqrt(m)*1.6),color:'#b35c0e',weight:2,fillColor:'#f28c28',fillOpacity:.7}
+      : {radius:16,color:'#3a63c9',dashArray:'4 3',weight:2.5,fillColor:'#dbe6ff',fillOpacity:.85};
+    L.circleMarker(ll,style).addTo(fg)
+     .bindTooltip(tip(pin,d),{permanent:true,direction:'bottom',offset:[0,6],className:'plabel'});
   });
   fg.addTo(map);
   map.fitBounds(fg.getBounds().pad(0.08));
-  if(!document.getElementById('plabel-style')){
-    const st=document.createElement('style');st.id='plabel-style';st.textContent='.plabel{background:rgba(255,255,255,.92);border:1px solid #97a0b5;border-radius:5px;box-shadow:none;padding:3px 6px} .plabel:before{display:none}';document.head.appendChild(st);
-  }
+  const st=document.createElement('style');st.textContent='.plabel{background:rgba(255,255,255,.92);border:1px solid #97a0b5;border-radius:5px;box-shadow:none;padding:3px 6px} .plabel:before{display:none}';document.head.appendChild(st);
 
   // charts
-  new Chart(document.getElementById('yearChart_'+cid),{type:'bar',
+  new Chart(document.getElementById('yearChart'),{type:'bar',
    data:{labels:YRS,datasets:[{data:ctotY,backgroundColor:YRS.map(y=>+y>=2024?'#f28c28':'#8fa0c4'),borderRadius:3}]},
    options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},
      scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#e4e8f2'}}}}});
   const shr = P.filter(p=>p.pin!=='OTH').slice(0,8);
-  new Chart(document.getElementById('shareChart_'+cid),{type:'bar',
+  new Chart(document.getElementById('shareChart'),{type:'bar',
    data:{labels:shr.map(p=>p.pin),datasets:[
      {label:'Meditators',data:shr.map(p=>p.med),backgroundColor:'#f28c28'},
      {label:'Potential',data:shr.map(p=>p.pot),backgroundColor:'#5b8def'}]},
