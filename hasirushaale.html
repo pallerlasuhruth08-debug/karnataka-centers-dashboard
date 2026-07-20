@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>#HasiruShaale Volunteering — Center-wise Dashboard</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  .chart-box.tall{height:640px}
+  .two{display:grid;grid-template-columns:1.5fr 1fr;gap:20px;align-items:start}
+  @media(max-width:900px){.two{grid-template-columns:1fr}}
+  .edge td:first-child{color:var(--warn)}
+  .legendrow{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+  .legendrow span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:11px;height:11px;border-radius:3px;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="eyebrow">#HasiruShaale · Karnataka · from Volunteering Form</div>
+    <h1>#HasiruShaale Volunteering — Center-wise Dashboard</h1>
+    <p class="sub">Every volunteer who filled the #HasiruShaale form, mapped to their nearest Isha center from their residence pincode (with Ishangam phone lookups for blank pincodes). This is a snapshot — regenerated when the form data is re-synced.</p>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="panel">
+    <h2>Volunteers by center</h2>
+    <div class="hint">All centers, ranked by number of volunteers who opted in. Amber = mapped Isha center; yellow = out-of-state / unresolved buckets.</div>
+    <div class="chart-box tall"><canvas id="barChart"></canvas></div>
+  </section>
+
+  <div class="two">
+    <section class="panel">
+      <h2>Where volunteers come from</h2>
+      <div class="hint">Split of all responses across in-Karnataka centers vs. edge buckets.</div>
+      <div class="chart-box" style="height:300px"><canvas id="pieChart"></canvas></div>
+      <div class="legendrow" id="pieLegend"></div>
+    </section>
+    <section class="panel">
+      <h2>Full breakdown</h2>
+      <div class="hint">Search a center. Edge buckets highlighted.</div>
+      <input type="search" id="q" placeholder="Search center…" style="width:100%;margin-bottom:10px">
+      <div class="tblwrap" style="max-height:520px">
+        <table id="tbl"><thead><tr><th>Center</th><th>Volunteers</th><th>Share</th></tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    Source: #HasiruShaale Volunteering Form (Form Responses 4) · pincode→center map derived from Ishangam registrant density ·
+    Snapshot generated <span id="gen"></span> · <span id="tot2"></span> total responses
+  </footer>
+</div>
+
+<script>
+const DATA = {
+  generated: "20 Jul 2026",
+  total: 260,
+  edges: ["Outside Karnataka","No record in Ishangam","Karnataka (center not identified)","Karnataka - Others","Pincode not provided"],
+  distribution: [
+    {center:"Hebbal",count:31},
+    {center:"Chikkaballapura",count:26},
+    {center:"Malleswaram",count:21},
+    {center:"Vijayanagar",count:19},
+    {center:"Outside Karnataka",count:18},
+    {center:"Bannerghatta Road",count:18},
+    {center:"Kanakapura Road",count:14},
+    {center:"Budigere Cross",count:13},
+    {center:"Marathahalli",count:13},
+    {center:"Bangalore Rural",count:12},
+    {center:"Electronic City",count:10},
+    {center:"Banaswadi",count:9},
+    {center:"Koramangala",count:8},
+    {center:"Girinagar",count:8},
+    {center:"Jayanagar",count:5},
+    {center:"No record in Ishangam",count:5},
+    {center:"Shivamogga",count:5},
+    {center:"Mysuru",count:3},
+    {center:"Whitefield",count:3},
+    {center:"Indiranagar",count:2},
+    {center:"Tumakuru",count:2},
+    {center:"Davangere",count:2},
+    {center:"Hubballi",count:2},
+    {center:"Kolar",count:2},
+    {center:"Udupi",count:1},
+    {center:"Gadag",count:1},
+    {center:"Chamarajanagar",count:1},
+    {center:"Kalaburagi",count:1},
+    {center:"Ramanagara",count:1},
+    {center:"Koppal",count:1},
+    {center:"Karnataka - Others",count:1},
+    {center:"Chitradurga",count:1},
+    {center:"Karnataka (center not identified)",count:1}
+  ]
+};
+
+const AMBER="#f28c28", YELLOW="#f2c94c";
+const D=DATA, dist=D.distribution, total=D.total;
+const isEdge=c=>D.edges.includes(c);
+const fmt=n=>n.toLocaleString('en-IN');
+document.getElementById('gen').textContent=D.generated;
+document.getElementById('tot2').textContent=fmt(total);
+
+// KPIs
+const distinctCenters=dist.filter(d=>!isEdge(d.center)).length;
+const top=dist[0];
+const outside=(dist.find(d=>d.center==='Outside Karnataka')||{count:0}).count;
+const norec=(dist.find(d=>d.center==='No record in Ishangam')||{count:0}).count;
+const inKA=total-outside-norec;
+document.getElementById('kpis').innerHTML=`
+  <div class="kpi hl"><div class="lbl">Total volunteers</div><div class="val">${fmt(total)}</div><div class="note">form responses mapped</div></div>
+  <div class="kpi"><div class="lbl">Isha centers represented</div><div class="val">${distinctCenters}</div><div class="note">distinct Karnataka centers</div></div>
+  <div class="kpi"><div class="lbl">Top center</div><div class="val">${top.center}</div><div class="note">${top.count} volunteers</div></div>
+  <div class="kpi"><div class="lbl">Within Karnataka</div><div class="val">${(inKA/total*100).toFixed(0)}%</div><div class="note">${fmt(inKA)} of ${fmt(total)}</div></div>
+  <div class="kpi"><div class="lbl">Out-of-state</div><div class="val">${fmt(outside)}</div><div class="note">+ ${norec} no Ishangam record</div></div>`;
+
+// Bar chart (all centers)
+new Chart(document.getElementById('barChart'),{
+  type:'bar',
+  data:{labels:dist.map(d=>d.center),datasets:[{label:'Volunteers',
+    data:dist.map(d=>d.count),
+    backgroundColor:dist.map(d=>isEdge(d.center)?YELLOW:AMBER),borderRadius:5}]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>x.parsed.x+' volunteers ('+(x.parsed.x/total*100).toFixed(1)+'%)'}}},
+    scales:{x:{grid:{color:'#2a2f3e'},ticks:{color:'#9aa1b5'}},
+            y:{grid:{display:false},ticks:{color:'#e8eaf0',font:{size:11.5}}}}}
+});
+
+// Pie: in-KA centers vs edge buckets
+const inKAcount=dist.filter(d=>!isEdge(d.center)).reduce((a,d)=>a+d.count,0);
+const pieSegs=[{l:'Mapped to a Karnataka center',v:inKAcount,c:AMBER},
+  {l:'Outside Karnataka',v:outside,c:'#5b8def'},
+  {l:'No record in Ishangam',v:norec,c:'#e05e3d'}];
+const otherEdge=total-inKAcount-outside-norec;
+if(otherEdge>0)pieSegs.push({l:'KA — center not resolved',v:otherEdge,c:YELLOW});
+new Chart(document.getElementById('pieChart'),{
+  type:'doughnut',
+  data:{labels:pieSegs.map(s=>s.l),datasets:[{data:pieSegs.map(s=>s.v),backgroundColor:pieSegs.map(s=>s.c),borderColor:'#181b24',borderWidth:2}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>x.label+': '+x.parsed+' ('+(x.parsed/total*100).toFixed(1)+'%)'}}}}
+});
+document.getElementById('pieLegend').innerHTML=pieSegs.map(s=>
+  `<span><i class="dot" style="background:${s.c}"></i>${s.l} — ${s.v}</span>`).join('');
+
+// Table
+function drawTable(q=''){
+  const rows=dist.filter(d=>d.center.toLowerCase().includes(q.toLowerCase()));
+  document.querySelector('#tbl tbody').innerHTML=rows.map(d=>
+    `<tr class="${isEdge(d.center)?'edge':''}"><td><b>${d.center}</b></td>
+     <td style="color:var(--accent);font-weight:600">${d.count}</td>
+     <td>${(d.count/total*100).toFixed(1)}%</td></tr>`).join('');
+}
+drawTable();
+document.getElementById('q').oninput=e=>drawTable(e.target.value);
+</script>
+</body>
+</html>
