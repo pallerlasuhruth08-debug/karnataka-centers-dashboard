@@ -106,14 +106,14 @@ document.getElementById('tot2').textContent=fmt(total);
 
 // KPIs
 const distinctCenters=dist.filter(d=>!isEdge(d.center)).length;
-const top=dist[0];
+const topCenter=dist[0];
 const outside=(dist.find(d=>d.center==='Outside Karnataka')||{count:0}).count;
 const norec=(dist.find(d=>d.center==='No record in Ishangam')||{count:0}).count;
 const inKA=total-outside-norec;
 document.getElementById('kpis').innerHTML=`
   <div class="kpi hl"><div class="lbl">Total volunteers</div><div class="val">${fmt(total)}</div><div class="note">form responses mapped</div></div>
   <div class="kpi"><div class="lbl">Isha centers represented</div><div class="val">${distinctCenters}</div><div class="note">distinct Karnataka centers</div></div>
-  <div class="kpi"><div class="lbl">Top center</div><div class="val">${top.center}</div><div class="note">${top.count} volunteers</div></div>
+  <div class="kpi"><div class="lbl">Top center</div><div class="val">${topCenter.center}</div><div class="note">${topCenter.count} volunteers</div></div>
   <div class="kpi"><div class="lbl">Within Karnataka</div><div class="val">${(inKA/total*100).toFixed(0)}%</div><div class="note">${fmt(inKA)} of ${fmt(total)}</div></div>
   <div class="kpi"><div class="lbl">Out-of-state</div><div class="val">${fmt(outside)}</div><div class="note">+ ${norec} no Ishangam record</div></div>`;
 
